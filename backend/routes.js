@@ -1,14 +1,13 @@
 import express from 'express';
-import { generateToken, authenticateToken } from './auth';
+import { generateToken, authenticateToken } from './auth.js';
 
-const app = express();
-app.use(express.json());
+const router = express.Router();
 
 const users = [
     {id: 1, username: 'admin', password: 'adminpass'} //Demo only (need to delete)
 ];
 
-app.post('/login', (req, res) => {
+router.post('/login', (req, res) => {
     const {username, password} = req.body;
     const user = users.find(u => u.username === username && u.password === password);
 
@@ -18,8 +17,8 @@ app.post('/login', (req, res) => {
     res.json({token});
 });
 
-app.get('/admin', authenticateToken, (req, res) => {
+router.get('/admin', authenticateToken, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
 });
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+export default router;

@@ -1,10 +1,14 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import sql from 'mssql';
+import router from './routes.js';
+import cors from 'cors';
 
 dotenv.config();
 const app = express();
+app.use(cors());
 app.use(express.json());
+app.use('/api', router);
 
 const config = {
     user: process.env.DB_USER,
