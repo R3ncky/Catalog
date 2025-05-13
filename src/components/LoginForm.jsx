@@ -1,4 +1,5 @@
 import { useState } from "react";
+import HomeButton from "./HomeButton";
 
 export default function LoginForm(){
     const [username, setUsername] = useState('');
@@ -32,6 +33,7 @@ export default function LoginForm(){
 
     return(
         <div style={{ maxWidth: '400px', margin: 'auto'}}>
+            <HomeButton />
             <h2>Admin login</h2>
             <form onSubmit={handleSubmit}>
                 <div>

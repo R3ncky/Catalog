@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import HomeButton from "./HomeButton";
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
@@ -92,6 +93,7 @@ export default function AdminPanel(){
 
     return(
         <div style={{maxWidth: '800px', margin: 'auto'}}>
+            <HomeButton />
             <h2>Admin Panel</h2>
             <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
                 <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required /><br />

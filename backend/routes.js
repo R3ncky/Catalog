@@ -1,6 +1,7 @@
 import express from 'express';
 import { generateToken, authenticateToken } from './auth.js';
 import sql from 'mssql';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -23,11 +24,29 @@ router.get('/admin', authenticateToken, (req, res) => {
 });
 
 //getting the products with all information
-router.get('/products', authenticateToken, async (req, res) =>{
+router.get('/products', async (req, res) =>{
+    let token = req.headers['authorization'];
+    let isLoggedIn = false;
+
+    if(token && token.startsWith('Bearer ')) {
+        token = token.split(' ')[1];
+        try{
+            jwt.verify(token, process.env.JWT_SECRET);
+            isLoggedIn = true;
+        } catch(err) {
+            isLoggedIn = false;
+        }
+    }
     try{
         const pool = await sql.connect();
         const result = await pool.request().query('SELECT * FROM Product');
-        res.json(result.recordset);
+        const products = result.recordset.map(product => {
+            if(!isLoggedIn) {
+                delete product.Price;
+            }
+            return product;
+        });
+        res.json(products);
     } catch(err) {
         console.error(err);
         res.status(500).json({message: 'Failed to fetch products'});

@@ -3,13 +3,18 @@ import './App.css'
 import LoginForm from './components/LoginForm';
 import AdminPanel from './components/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
+import Index from './components/Index';
+import ProductCatalog from './components/ProductCatalog';
+import HomeButton from './components/HomeButton';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LoginForm />} />
+        <Route path="/" element={<Index />} />
+        <Route path="/catalog" element={<ProductCatalog/>} />
+        <Route path="/login" element={<LoginForm />} />
         <Route 
             path="/admin"
             element={
