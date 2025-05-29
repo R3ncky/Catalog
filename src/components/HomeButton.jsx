@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import logo from '../assets/logo.png';
+import logo from '../styles/logo.png';
+import '../styles/ProductCatalog.css';
 
 export default function HomeButton() {
     const navigate =  useNavigate();
@@ -9,13 +10,6 @@ export default function HomeButton() {
         src={logo}
         alt="Home"
         onClick={() => navigate('/')}
-        style={{
-            position: 'fixed',
-            top: '10px',
-            left: '10px',
-            width: '40px',
-            height: '40px',
-            cursor: 'pointer'
-        }}/>
+        className="home-button"/>
     );
 }

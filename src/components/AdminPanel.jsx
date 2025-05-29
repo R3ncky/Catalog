@@ -111,6 +111,8 @@ export default function AdminPanel(){
             <div>
                 {products.map(product =>(
                     <div key={product.ProductID} style={{border: '1px solid gray', padding: '1rem', marginBottom: '1rem'}}>
+                        <img src={`/assets/${product.ImagePath}`} alt={product.Name}
+                        style={{width: '120px', height: '120px', objectFit: 'cover', marginRight: '1rem'}} />
                         <h3>{product.Name}</h3>
                         <p>{product.Description}</p>
                         <p><strong>${product.Price}</strong></p>

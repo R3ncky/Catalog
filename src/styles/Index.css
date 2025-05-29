@@ -1,0 +1,20 @@
+.index-wrapper{
+    text-align: center;
+    padding-top: 100px;
+}
+.catalog-button{
+    padding: 10px 20px;
+    margin-top: 20px;
+}
+.top-right-auth{
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.admin-button{
+    padding: 10px 20px;
+    margin-top: 20px;
+}
