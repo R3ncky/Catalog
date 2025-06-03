@@ -20,7 +20,6 @@ export default function LoginForm(){
 
             if(response.ok) {
                 localStorage.setItem('token', data.token);
-                alert("Login successful!");
                 window.location.href = '/admin';
             } else {
                 setError(data.message || 'Login failed');

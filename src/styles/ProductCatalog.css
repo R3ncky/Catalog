@@ -19,7 +19,7 @@
     padding: 10px 40px;
     max-width: 2000px;
     margin: auto;
-    border-bottom: 1px solid lightsalmon;
+    border-bottom: 3px solid lightsalmon;
     background-color: #fff;
     
 }
@@ -27,7 +27,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding-right: 70%;
+    padding-right: 63%;
 }
 
 .navbar-right{
@@ -36,13 +36,29 @@
     gap: 10px;
     margin-top: 30px;
 }
+.left-buttons{
+    padding: 10px 20px;
+    margin-top: 20px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+.Current-Button{
+   padding: 10px 20px;
+   margin-top: 20px;
+   background-color: darkgreen;
+   cursor: pointer;
+   
+}
 .LoginButton{
     padding: 5px 10px;
     font-size: 15px;
+    cursor: pointer;
 }
 .product-grid{
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    max-width: 960px;
+    margin: auto;
     gap: 20px;
     padding: 20px;
 }
@@ -60,4 +76,24 @@
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 10px;
+}
+.pagination-controls{
+    text-align: center;
+    margin-top: 20px;
+}
+.pagination-controls button{
+    margin: 5px;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 16px;
+    background-color: white;
+    cursor: pointer;
+}
+.pagination-controls button:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.pagination-controls .active-page{
+    background-color: lightsalmon;
+    font-weight: bold;
 }

@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import HomeButton from "./HomeButton";
+//import { application } from "express";
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
     const [form, setForm] = useState({
         name: '',
         description: '',
@@ -25,6 +28,11 @@ export default function AdminPanel(){
             }
         })
         .then(res => res.json()).then(data => setProducts(data)).catch(err => console.error('Fetch error: ', err));
+    }, []);
+
+    useEffect(() => {
+        fetch('http://localhost:5000/api/categories')
+        .then(res => res.json()).then(data => setCategories(data)).catch(err => console.error('Fetch categories error: ', err));
     }, []);
 
     const HandleDelete = async(id) => {
@@ -60,6 +68,7 @@ export default function AdminPanel(){
     const handleSubmit = async(e) =>{
         e.preventDefault();
         try{
+            console.log('Token:', token);
             const res = await fetch('http://localhost:5000/api/products', {
                 method: 'POST',
                 headers: {
@@ -69,7 +78,21 @@ export default function AdminPanel(){
                 body: JSON.stringify(form)
             });
             if(res.ok) {
-                const  newProduct = await res.json();
+                const data = await res.json();
+                const  newProductId = data.productId;
+                console.log('Token:', token);
+                await fetch('http://localhost:5000/api/product-category', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        categoryId: selectedCategory,
+                        productId: newProductId
+                    })
+                });
+
                 setForm({
                     name: '',
                     description: '',
@@ -81,10 +104,12 @@ export default function AdminPanel(){
                     isFeatured: false,
                     isArchived: false
                 });
+                setSelectedCategory('');
                 //refresh products
                 window.location.reload();
             } else{
                 alert('Failed to add product');
+                alert('the problem is here');
             }
         } catch(err){
             console.error('Add product error: ',err);
@@ -101,6 +126,12 @@ export default function AdminPanel(){
                 <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required/><br />
                 <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} /><br />
                 <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} /><br />
+                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required>
+                    <option value="">Select a Category</option>
+                    {categories.map(cat => (
+                        <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
+                    ))}
+                </select><br />
                 <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} /><br />
                 <input name="status" placeholder="Status" value={form.status} onChange={handleChange} /><br />
                 <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />Featured</label><br />

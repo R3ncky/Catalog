@@ -1,20 +1,33 @@
 .index-wrapper{
     text-align: center;
-    padding-top: 100px;
+    padding-top: 20px;
 }
-.catalog-button{
-    padding: 10px 20px;
-    margin-top: 20px;
-}
-.top-right-auth{
-    position: fixed;
-    top: 10px;
-    right: 10px;
+.navbar-right-index{
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-top: 30px;
 }
-.admin-button{
+.left-buttons-index{
     padding: 10px 20px;
     margin-top: 20px;
+    background-color: lightgreen;
+    cursor: pointer;
+}
+.navbar-index{
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 40px;
+    max-width: 2000px;
+    margin: auto;
+    border-bottom: 3px solid lightsalmon;
+    background-color: #fff;
+}
+.navbar-left-index{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 63%;
 }

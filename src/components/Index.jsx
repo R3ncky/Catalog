@@ -7,6 +7,7 @@ export default function Index(){
     const navigate = useNavigate();
     const [token, setToken] = useState(null);
     const [username, setUsername] = useState('');
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
@@ -21,6 +22,10 @@ export default function Index(){
                 setUsername('');
             }
         }
+    }, []);
+    useEffect(() => {
+        fetch('http://localhost:5000/api/categories').then(res => res.json()).then(data => setCategories(data))
+            .catch(err => console.error('Fetch categories error', err));
     }, []);
 
     const goToLogin = () => {
@@ -37,14 +42,14 @@ export default function Index(){
     let authSection;
     if(token){
         authSection = (
-            <div className='top-right-auth'>
+            <div className='navbar-right-index'>
                 <span>Welcome, {username}</span>
                 <button onClick={handleLogOut}>Logout</button>
             </div>
         );
     } else {
         authSection = (
-            <div className='top-right-auth'>
+            <div className='navbar-right-index'>
                 <button onClick={goToLogin}>Login</button>
             </div>
         );
@@ -53,20 +58,35 @@ export default function Index(){
     let adminButton;
     if(token){
         adminButton = (
-            <button onClick={() => navigate('/admin')} className='admin-button'>Go To Admin Panel</button>
+            <button onClick={() => navigate('/admin')} className='left-buttons-index'>Go To Admin Panel</button>
         );
     }
     return (
-        <div>
+        <>
+            <div className="navbar-index">               
             <HomeButton />
+            <div className='navbar-left-index'>
+            <button className="left-buttons-index" onClick={() => navigate(0)}>Home</button>
+            {adminButton}
+            <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Browse Catalog</button>
+            </div>
             {authSection}
+            </div>
             <div className='index-wrapper'>
             <h1>Welcome to the Catalog App</h1>
-            {adminButton}
-            <button onClick={() => navigate('catalog')} style={{padding: '10px 20px', marginTop: '20px'}}>
-                Browse Catalog
-            </button>
+            <div className='category-buttons' style={{marginTop: '2rem'}}>
+              <h2>Browse by Category</h2>
+              <div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+                gap: '0.5rem', marginTop: '1rem'}}>
+                    <button onClick={() => navigate('/catalog')}>All</button>
+                    {categories.map(cat => (
+                        <button key={cat.CategoryID} onClick={() => navigate(`/catalog?category=${cat.CategoryID}`)}>
+                            {cat.Name}
+                        </button>
+                    ))}
+              </div>  
             </div>
-        </div>
+            </div>
+        </>
     )
 }

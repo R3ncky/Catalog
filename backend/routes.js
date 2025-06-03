@@ -23,6 +23,17 @@ router.get('/admin', authenticateToken, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
 });
 
+//getting all the active categories
+router.get('/categories', async(req, res) => {
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request().query('SELECT * FROM Category WHERE IsActive = 1');
+        res.json(result.recordset);
+    }catch (err){
+        console.error('Error fetching categories:', err);
+        res.status(500).json({message: 'Failed to fetch categories'});
+    }
+})
 //getting the products with all information
 router.get('/products', async (req, res) =>{
     let token = req.headers['authorization'];
@@ -38,8 +49,20 @@ router.get('/products', async (req, res) =>{
         }
     }
     try{
+        const categoryId = req.query.category;
         const pool = await sql.connect();
-        const result = await pool.request().query('SELECT * FROM Product');
+        let query;
+        if(categoryId) {
+            query = `SELECT p.* FROM Product p
+                     JOIN CategoryProduct cp ON p.ProductID = cp.ProductID
+                     WHERE cp.CategoryID = @CategoryID`;
+        } else{
+            query = 'SELECT * FROM Product';
+        }
+        const request = pool.request();
+        if(categoryId) request.input('CategoryID', sql.Int, categoryId);
+        const result = await request.query(query);
+
         const products = result.recordset.map(product => {
             if(!isLoggedIn) {
                 delete product.Price;
@@ -59,19 +82,40 @@ router.post('/products', authenticateToken, async(req, res) =>{
 
     try{
         const pool = await sql.connect();
-        await pool.request().input('Name', sql.NVarChar, name).input('Description', sql.NVarChar, description)
-            .input('Price', sql.Decimal(10,2), price).input('ImagePath', sql.NVarChar, imagePath).input('Brand', sql.NVarChar, brand)
-            .input('StockQty', sql.Int, stockqty).input('Status', sql.NVarChar, status).input('IsFeatured', sql.Bit, isFeatured)
-            .input('IsArchived', sql.Bit, isArchived).query(`
-                INSERT INTO Product (
-                    Name, Description, Price, ImagePath, Brand, StockQty, Status, IsFeatured, IsArchived)
-                VALUES (
-                    @Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @Status, @IsFeatured, @IsArchived)`);
-        
-        res.status(201).json({message: 'Product added successfully'});
+        const result = await pool.request().input('Name', sql.NVarChar, name)
+                            .input('Description', sql.NVarChar, description)
+                            .input('Price', sql.Decimal(10,2), price)
+                            .input('ImagePath', sql.NVarChar, imagePath)
+                            .input('Brand', sql.NVarChar, brand)
+                            .input('StockQty', sql.Int, stockqty)
+                            .input('Status', sql.NVarChar, status)
+                            .input('IsFeatured', sql.Bit, isFeatured)
+                            .input('IsArchived', sql.Bit, isArchived)
+                            .query(`
+                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, Status, IsFeatured, IsArchived)
+                OUTPUT INSERTED.ProductID
+                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @Status, @IsFeatured, @IsArchived)`);
+        const newProductID = result.recordset[0].ProductID;
+        res.status(201).json({message: 'Product added successfully', productId: newProductID});
     } catch(err) {
         console.error(err);
         res.status(500).json({message: 'Failed to add product'});
+    }
+});
+
+//linking the new product with a category
+router.post('/product-category', authenticateToken, async(req, res) =>{
+    const {categoryId, productId} = req.body;
+
+    try{
+        const pool = await sql.connect();
+        await pool.request().input('CategoryID', sql.Int, categoryId)
+                            .input('ProductID', sql.Int, productId)
+                            .query('INSERT INTO CategoryProduct (CategoryID, ProductID) VALUES (@CategoryID, @ProductID)');
+        res.status(201).json({message: 'CategoryProduct link created successfully'});
+    } catch (err){
+        console.error(err);
+        res.status(500).json({message: 'Failed to create CategoryProduct link'});
     }
 });
 
