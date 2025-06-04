@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import HomeButton from "./HomeButton";
+import '../styles/AdminPanel.css';
 //import { application } from "express";
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState(null);
     const [form, setForm] = useState({
         name: '',
         description: '',
@@ -116,6 +119,52 @@ export default function AdminPanel(){
         }
     };
 
+    const startEdit = (product) => {
+        setEditForm({
+            name: product.Name ?? '',
+            description: product.Description ?? '',
+            price: product.Price ?? '',
+            imagePath: product.ImagePath ?? '',
+            brand: product.Brand ?? '',
+            stockqty: product.StockSqty ?? '',
+            status: product.Status ?? 'Available',
+            isFeatured: product.IsFeatured ?? false,
+            isArchived: product.IsArchived ?? false,
+            ProductID: product.ProductID
+        });
+        setIsEditing(true);
+    };
+
+    const handleEditChange = (e) => {
+        const {name, value, type, checked } = e.target;
+        setEditForm(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleEditSubmit = async () => {
+        try{
+            const res = await fetch(`http://localhost:5000/api/products/${editForm.ProductID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(editForm)
+            });
+            if(res.ok){
+            setIsEditing(false);
+            setEditForm(null);
+            window.location.reload();
+            } else {
+                alert('Failed to update product');
+            }
+        } catch(err){
+            console.error('Edit product error: ', err);
+        }
+    };
+
     return(
         <div style={{maxWidth: '800px', margin: 'auto'}}>
             <HomeButton />
@@ -149,9 +198,28 @@ export default function AdminPanel(){
                         <p><strong>${product.Price}</strong></p>
                         <p>Status: {product.Status}</p>
                         <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
+                        <button onClick={() => startEdit(product)}>Edit</button>
                     </div>
                 ))}
             </div>
+            {isEditing && editForm && (
+                <div className="edit-modal">
+                    <div className="edit-grid">
+                        <h3>Edit Product</h3>
+                        <input name="name" value={editForm.name} onChange={handleEditChange} placeholder="Name"/><br />
+                        <textarea name="description" value={editForm.description} onChange={handleEditChange} placeholder="Description" /><br />
+                        <input name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" /><br />
+                        <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" /><br />
+                        <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  /><br />
+                        <input name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" /><br />
+                        <input name="status" value={editForm.status} onChange={handleEditChange} placeholder="Status" /><br />
+                        <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange}/>Featured</label><br />
+                        <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange}/>Archived</label><br />
+                        <button onClick={handleEditSubmit}>Post</button>
+                        <button onClick={() => {setIsEditing(false); setEditForm(null);}}>Cancel</button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

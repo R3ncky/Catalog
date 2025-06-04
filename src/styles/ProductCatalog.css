@@ -1,5 +1,6 @@
 .product-page{
-    max-width: 1200px;
+    max-width: 1500px;
+    display: flex;
     margin: auto;
 }
 .header2{
@@ -80,6 +81,7 @@
 .pagination-controls{
     text-align: center;
     margin-top: 20px;
+    flex: 2;
 }
 .pagination-controls button{
     margin: 5px;
@@ -96,4 +98,7 @@
 .pagination-controls .active-page{
     background-color: lightsalmon;
     font-weight: bold;
+}
+.filter-section{
+    flex: 1;
 }

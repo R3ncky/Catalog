@@ -9,13 +9,22 @@ export default function ProductCatalog() {
     const [token, setToken] = useState(null);
     const [username, setUsername] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [loading, setLoading] = useState(true);
+    const [categories, setCategories] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [userModifiedCategories, setUserModifiedCategories] = useState(false);
     const location = useLocation();
     const productsPerPage = 12;
     const navigate = useNavigate();
     const queryParams = new URLSearchParams(location.search);
     const selectedCategoryId = queryParams.get('category');
 
+    useEffect(() => {
+        if(selectedCategoryId && !selectedCategories.includes(Number(selectedCategoryId))){
+            setSelectedCategories(prev => [...prev, Number(selectedCategoryId)]);
+        }
+    }, [selectedCategoryId]);
     
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -32,12 +41,31 @@ export default function ProductCatalog() {
             setToken(null);
         }
     }
+
+        fetch('http://localhost:5000/api/categories')
+            .then(res => res.json()).then(data => setCategories(data))
+            .catch(err => console.error('Error fetching categories:', err));
         window.scrollTo({top: 0, behavior: 'smooth'});
 
-        let url = 'http://localhost:5000/api/products';
-        if(selectedCategoryId) {
-            url += `?category=${selectedCategoryId}`;
+        
+
+        const params = new URLSearchParams();
+        
+        if(selectedCategories.length > 0) {
+            params.append('categories', selectedCategories.join(','));
         }
+        if(minPrice){
+            params.append('minPrice', minPrice);
+        }
+        if(maxPrice){
+            params.append('maxPrice', maxPrice);
+        }
+        if(!userModifiedCategories && selectedCategoryId && selectedCategories.length === 0){
+            params.append('category', selectedCategoryId);
+        }
+
+        const url = `http://localhost:5000/api/products?${params.toString()}`;
+
         fetch(url, {headers: headers})
         .then(async res => {
             if(!res.ok){
@@ -50,7 +78,7 @@ export default function ProductCatalog() {
             setCurrentPage(1);
         })
         .catch(err => console.error('Error fetching the products: ', err.message || err));
-    }, [selectedCategoryId]);
+    }, [selectedCategoryId, selectedCategories, minPrice, maxPrice, token]);
 
     const goToLogin = () => {
         navigate('/login');
@@ -61,6 +89,11 @@ export default function ProductCatalog() {
         setToken(null);
         setUsername('');
         navigate('/');
+    };
+
+    const ToggleCategory = (id) => {
+        setUserModifiedCategories(true);
+        setSelectedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
     };
 
     const totalPages = Math.ceil(products.length / productsPerPage);
@@ -106,8 +139,29 @@ export default function ProductCatalog() {
                 </div>
                 {authSection}              
             </div>
-            <div className="product-page">
             <h2 className="header2">Product Catalog</h2>
+            <div className="product-page">
+            
+            <div className="filter-section">
+                <h3>Filer by category</h3>
+                {categories.map(category => (
+                    <label key={category.CategoryID}>
+                        <input type="checkbox" value={category.CategoryID}
+                        checked={selectedCategories.includes(category.CategoryID)}
+                        onChange={() => ToggleCategory(category.CategoryID)} />
+                        {category.Name}
+                    </label>
+                ))}
+                {token && (
+                    <>
+                    <h3>Filter by Price</h3>
+                    <input type="number" placeholder="Min Price"
+                    value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+                    <input type="number" placeholder="Max Price"
+                    value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+                    </>
+                )}
+            </div>
             <div className="product-grid">
             <AnimatePresence>
                 {currentProducts.map(product => (
@@ -125,7 +179,9 @@ export default function ProductCatalog() {
                 ))}
                 </AnimatePresence>
             </div>
-            <div className="pagination-controls">
+            
+        </div>
+        <div className="pagination-controls">
                 <button onClick={goToFirst} disabled={currentPage === 1}>First</button>
                 <button onClick={goToPrev} disabled={currentPage === 1}>Previous</button>
                 {[...Array(totalPages)].map((_,i) => (
@@ -137,7 +193,6 @@ export default function ProductCatalog() {
                 <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
                 <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
             </div>
-        </div>
         </>
     )
 }
