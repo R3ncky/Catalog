@@ -49,18 +49,44 @@ router.get('/products', async (req, res) =>{
         }
     }
     try{
-        const categoryId = req.query.category;
+        const categoryParam = req.query.category;
+        const categoriesParam = req.query.categories;
+        const minPrice = req.query.minPrice;
+        const maxPrice = req.query.maxPrice;
+
         const pool = await sql.connect();
-        let query;
-        if(categoryId) {
-            query = `SELECT p.* FROM Product p
-                     JOIN CategoryProduct cp ON p.ProductID = cp.ProductID
-                     WHERE cp.CategoryID = @CategoryID`;
-        } else{
-            query = 'SELECT * FROM Product';
-        }
         const request = pool.request();
-        if(categoryId) request.input('CategoryID', sql.Int, categoryId);
+
+        let query = `
+            SELECT DISTINCT p.* FROM Product p
+            LEFT JOIN CategoryProduct cp ON p.ProductID = cp.ProductID
+            WHERE 1=1`;
+
+        if(categoryParam){
+            query += ` AND cp.CategoryID = @CategoryID`;
+            request.input('CategoryID', sql.Int, categoryParam);
+        }
+        
+        if(categoriesParam){
+            const categoryIds = categoriesParam.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            if(categoryIds.length > 0){
+                const placeholders = categoryIds.map((_, i) => `@cat${i}`).join(',');
+                query += ` AND cp.CategoryID IN (${placeholders})`;
+                categoryIds.forEach((id, i) => request.input(`cat${i}`, sql.Int, id));
+                    
+                }
+            }
+
+        if(minPrice){
+            query += ` AND p.Price >= @MinPrice`;
+            request.input('MinPrice', sql.Decimal(10, 2), minPrice);
+        }
+
+        if(maxPrice){
+            query += ` AND p.Price <= @MaxPrice`;
+            request.input('MaxPrice', sql.Decimal(10, 2), maxPrice);
+        }
+        
         const result = await request.query(query);
 
         const products = result.recordset.map(product => {
@@ -131,6 +157,46 @@ router.delete('/products/:id', authenticateToken, async(req, res) =>{
     } catch(err){
         console.error(err);
         res.status(500).json({message: 'Failed to delete product'});
+    }
+});
+
+//updating a product by ID
+router.put('/products/:id', authenticateToken, async(req, res) => {
+    const productId = req.params.id;
+    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived} = req.body;
+
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request()
+                .input('ProductID', sql.Int, productId)
+                .input('Name', sql.NVarChar, name)
+                .input('Description', sql.NVarChar, description)
+                .input('Price', sql.Decimal(10, 2), price)
+                .input('ImagePath', sql.NVarChar, imagePath)
+                .input('Brand', sql.NVarChar, brand)
+                .input('StockQty', sql.Int, stockqty)
+                .input('Status', sql.NVarChar, status)
+                .input('IsFeatured', sql.Bit, isFeatured)
+                .input('IsArchived', sql.Bit, isArchived)
+                .query(`UPDATE Product SET
+                            Name = @Name,
+                            Description = @Description,
+                            Price = @Price,
+                            ImagePath = @ImagePath,
+                            Brand = @Brand,
+                            StockQty = @StockQty,
+                            Status = @Status,
+                            IsFeatured = @IsFeatured,
+                            IsArchived = @IsArchived
+                        WHERE ProductID = @ProductID`);
+                
+        if(result.rowsAffected[0] === 0){
+            return res.status(404).json({message: 'Product not found'});
+        }
+        res.json({message: 'Product updated successfully'});
+    } catch(err){
+        console.error(err);
+        res.status(500).json({message: 'Failed to update product'});
     }
 });
 export default router;
