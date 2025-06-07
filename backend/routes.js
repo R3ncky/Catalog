@@ -1,5 +1,5 @@
 import express from 'express';
-import { generateToken, authenticateToken } from './auth.js';
+import { generateToken, authenticateToken, refreshToken } from './auth.js';
 import sql from 'mssql';
 import jwt from 'jsonwebtoken';
 
@@ -18,6 +18,8 @@ router.post('/login', (req, res) => {
     const token = generateToken(user);
     res.json({token});
 });
+
+router.post('api/refresh-token', refreshToken);
 
 router.get('/admin', authenticateToken, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
@@ -104,7 +106,7 @@ router.get('/products', async (req, res) =>{
 
 //inserting a new product
 router.post('/products', authenticateToken, async(req, res) =>{
-    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived } = req.body;
+    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty } = req.body;
 
     try{
         const pool = await sql.connect();
@@ -117,10 +119,12 @@ router.post('/products', authenticateToken, async(req, res) =>{
                             .input('Status', sql.NVarChar, status)
                             .input('IsFeatured', sql.Bit, isFeatured)
                             .input('IsArchived', sql.Bit, isArchived)
+                            .input('DiscountPercentage', sql.Int, discountPercentage)
+                            .input('DiscountMinQty', sql.Int, discountMinQty)
                             .query(`
-                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, Status, IsFeatured, IsArchived)
+                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, Status, IsFeatured, IsArchived, DiscountPercentage, DiscountMinQty)
                 OUTPUT INSERTED.ProductID
-                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @Status, @IsFeatured, @IsArchived)`);
+                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @Status, @IsFeatured, @IsArchived, @DiscountPercentage, @DiscountMinQty)`);
         const newProductID = result.recordset[0].ProductID;
         res.status(201).json({message: 'Product added successfully', productId: newProductID});
     } catch(err) {
@@ -163,7 +167,7 @@ router.delete('/products/:id', authenticateToken, async(req, res) =>{
 //updating a product by ID
 router.put('/products/:id', authenticateToken, async(req, res) => {
     const productId = req.params.id;
-    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived} = req.body;
+    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty} = req.body;
 
     try{
         const pool = await sql.connect();
@@ -178,6 +182,8 @@ router.put('/products/:id', authenticateToken, async(req, res) => {
                 .input('Status', sql.NVarChar, status)
                 .input('IsFeatured', sql.Bit, isFeatured)
                 .input('IsArchived', sql.Bit, isArchived)
+                .input('DiscountPercentage', sql.Int, discountPercentage)
+                .input('DiscountMinQty', sql.Int, discountMinQty)
                 .query(`UPDATE Product SET
                             Name = @Name,
                             Description = @Description,
@@ -187,7 +193,9 @@ router.put('/products/:id', authenticateToken, async(req, res) => {
                             StockQty = @StockQty,
                             Status = @Status,
                             IsFeatured = @IsFeatured,
-                            IsArchived = @IsArchived
+                            IsArchived = @IsArchived,
+                            DiscountPercentage = @DiscountPercentage,
+                            DiscountMinQty = @DiscountMinQty
                         WHERE ProductID = @ProductID`);
                 
         if(result.rowsAffected[0] === 0){

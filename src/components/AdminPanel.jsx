@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import HomeButton from "./HomeButton";
+import { useNavigate } from "react-router-dom";
 import '../styles/AdminPanel.css';
-//import { application } from "express";
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
     const [editForm, setEditForm] = useState(null);
+    const navigate = useNavigate();
     const [form, setForm] = useState({
         name: '',
         description: '',
@@ -22,6 +24,51 @@ export default function AdminPanel(){
     });
 
     const token = localStorage.getItem('token');
+
+    function isTokenExpired(token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp < now;
+        } catch(e) {
+            return true;
+        }
+    }
+    
+        const checkAndRefreshToken = () => {
+            const token = localStorage.getItem('token');
+            if(!token || isTokenExpired(token)) {
+                localStorage.removeItem('token');
+                return;
+            }
+
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            const timeLeft = payload.exp - now;
+
+            if(timeLeft < 300){
+                fetch('api/refresh-token', {
+                    method: 'POST',
+                    headers: {'Authorization' : `Bearer ${token}`}
+                })
+                .then(res => res.json()).then(data => {
+                    if(data.token){
+                        localStorage.setItem('token', data.token);
+                    }
+                }).catch(() => {
+                    localStorage.removeItem('token');
+                });
+            }
+        };
+            
+    
+    
+        useEffect(() => {   
+          ['keydown', 'click'].forEach(event => window.addEventListener(event, checkAndRefreshToken));
+          return () => {
+            ['keydown', 'click'].forEach(event => window.removeEventListener(event, checkAndRefreshToken));
+          };
+    }, []);
 
     //getting the products on load
     useEffect(() => {
@@ -112,7 +159,6 @@ export default function AdminPanel(){
                 window.location.reload();
             } else{
                 alert('Failed to add product');
-                alert('the problem is here');
             }
         } catch(err){
             console.error('Add product error: ',err);
@@ -130,6 +176,8 @@ export default function AdminPanel(){
             status: product.Status ?? 'Available',
             isFeatured: product.IsFeatured ?? false,
             isArchived: product.IsArchived ?? false,
+            discountPercentage: product.DiscountPercentage ?? '',
+            discountMinQty: product.DiscountMinQty ?? '',
             ProductID: product.ProductID
         });
         setIsEditing(true);
@@ -169,25 +217,7 @@ export default function AdminPanel(){
         <div style={{maxWidth: '800px', margin: 'auto'}}>
             <HomeButton />
             <h2>Admin Panel</h2>
-            <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
-                <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required /><br />
-                <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required /><br />
-                <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required/><br />
-                <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} /><br />
-                <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} /><br />
-                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required>
-                    <option value="">Select a Category</option>
-                    {categories.map(cat => (
-                        <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
-                    ))}
-                </select><br />
-                <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} /><br />
-                <input name="status" placeholder="Status" value={form.status} onChange={handleChange} /><br />
-                <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />Featured</label><br />
-                <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} />Archived</label><br />
-                <button type="submit">Add product</button>
-            </form>
-
+            <button onClick={() => setIsAdding(true)} style={{marginBottom: '1rem'}}>Add New Product</button>
             <div>
                 {products.map(product =>(
                     <div key={product.ProductID} style={{border: '1px solid gray', padding: '1rem', marginBottom: '1rem'}}>
@@ -195,11 +225,15 @@ export default function AdminPanel(){
                         style={{width: '120px', height: '120px', objectFit: 'cover', marginRight: '1rem'}} />
                         <h3>{product.Name}</h3>
                         <p>{product.Description}</p>
-                        <p><strong>${product.Price}</strong></p>
+                        <p><strong>Price ${product.Price}</strong></p>
+                        <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
+                        {product.DiscountPercentage && product.DiscountMinQty && (
+                            <p><strong>Discount: </strong>Buy {product.DiscountMinQty}+ and get {product.DiscountPercentage}% Off!</p> 
+                        )}
                         <p>Status: {product.Status}</p>
                         <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
                         <button onClick={() => startEdit(product)}>Edit</button>
-                    </div>
+                    </div>                  
                 ))}
             </div>
             {isEditing && editForm && (
@@ -215,8 +249,36 @@ export default function AdminPanel(){
                         <input name="status" value={editForm.status} onChange={handleEditChange} placeholder="Status" /><br />
                         <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange}/>Featured</label><br />
                         <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange}/>Archived</label><br />
+                        <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} /><br />
+                        <input type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange}/><br />
                         <button onClick={handleEditSubmit}>Post</button>
-                        <button onClick={() => {setIsEditing(false); setEditForm(null);}}>Cancel</button>
+                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}}>Cancel</button>
+                    </div>
+                </div>
+            )}
+            {isAdding && (
+                <div className="edit-modal">
+                    <div className="edit-grid">
+                         <h3>Add New</h3>
+                         <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
+                            <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required /><br />
+                            <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required /><br />
+                            <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required/><br />
+                            <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} /><br />
+                            <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} /><br />
+                            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required>
+                            <option value="">Select a Category</option>
+                                {categories.map(cat => (
+                                <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
+                                ))}
+                            </select><br />
+                            <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} /><br />
+                            <input name="status" placeholder="Status" value={form.status} onChange={handleChange} /><br />
+                            <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />Featured</label><br />
+                            <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} />Archived</label><br />
+                            <button type="submit">Post</button>
+                            <button type="button" onClick={() => setIsAdding(false)}>Cancel</button>
+                         </form>
                     </div>
                 </div>
             )}

@@ -4,7 +4,6 @@ import '../styles/ProductCatalog.css';
 
 export default function HomeButton() {
     const navigate =  useNavigate();
-
     return (
         <img 
         src={logo}

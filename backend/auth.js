@@ -17,9 +17,21 @@ export function authenticateToken(req, res, next){
     jwt.verify(token, secret, (err, user) =>{
         if(err){ 
             console.error('Token verification failed', err);
-            return res.sendStatus(403);
+            return res.sendStatus(401);
         }
         req.user = user;
         next();
+    });
+}
+
+export function refreshToken(req, res) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split('')[1];
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, secret, (err, user) => {
+        if (err) return res.sendStatus(403);
+
+        const newToken = generateToken({id: user.id, username: user.username});
     });
 }

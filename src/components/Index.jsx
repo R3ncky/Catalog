@@ -20,12 +20,59 @@ export default function Index(){
                 console.warn('Invalid token: ', err.message);
                 setToken(null);
                 setUsername('');
+                localStorage.removeItem('token');
+                navigate('/login');
             }
         }
     }, []);
     useEffect(() => {
         fetch('http://localhost:5000/api/categories').then(res => res.json()).then(data => setCategories(data))
             .catch(err => console.error('Fetch categories error', err));
+    }, []);
+
+    function isTokenExpired(token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp < now;
+        } catch(e) {
+            return true;
+        }
+    }
+    
+        const checkAndRefreshToken = () => {
+            const token = localStorage.getItem('token');
+            if(!token || isTokenExpired(token)) {
+                localStorage.removeItem('token');
+                return;
+            }
+
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            const timeLeft = payload.exp - now;
+
+            if(timeLeft < 300){
+                fetch('api/refresh-token', {
+                    method: 'POST',
+                    headers: {'Authorization' : `Bearer ${token}`}
+                })
+                .then(res => res.json()).then(data => {
+                    if(data.token){
+                        localStorage.setItem('token', data.token);
+                    }
+                }).catch(() => {
+                    localStorage.removeItem('token');
+                });
+            }
+        };
+            
+    
+    
+        useEffect(() => {   
+          ['keydown', 'click'].forEach(event => window.addEventListener(event, checkAndRefreshToken));
+          return () => {
+            ['keydown', 'click'].forEach(event => window.removeEventListener(event, checkAndRefreshToken));
+          };
     }, []);
 
     const goToLogin = () => {
