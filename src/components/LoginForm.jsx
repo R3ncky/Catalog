@@ -1,10 +1,13 @@
 import { useState } from "react";
 import HomeButton from "./HomeButton";
+import '../styles/LoginForm.css';
+import { useNavigate } from "react-router-dom";
 
 export default function LoginForm(){
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) =>{
         e.preventDefault();
@@ -14,13 +17,13 @@ export default function LoginForm(){
             const response = await fetch('http://localhost:5000/api/login',{
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({username, password}),
+                body: JSON.stringify({email, password}),
             });
             const data = await response.json();
 
             if(response.ok) {
                 localStorage.setItem('token', data.token);
-                window.location.href = '/admin';
+                window.location.href = '/';
             } else {
                 setError(data.message || 'Login failed');
             }
@@ -31,25 +34,33 @@ export default function LoginForm(){
     };
 
     return(
-        <div style={{ maxWidth: '400px', margin: 'auto'}}>
-            <HomeButton />
-            <h2>Admin login</h2>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <input type="text" placeholder="Username" value={username} 
-                    onChange={(e) => setUsername(e.target.value)} required />
-                </div>
-                <div style={{marginTop: ' 10px'}}>
-                    <input type="password" placeholder="Password" value={password} 
-                    onChange={(e) => setPassword(e.target.value)} required />
-                </div>
-                <div style={{marginTop: '20px'}}>
-                    <button type="submit">Login</button>
+        <div>
+            <header>
+            <div className="navbar-login">
+                <HomeButton />
+                <button className="left-buttons-login" onClick={() => navigate('/')}>Home</button>
+                <button className="left-buttons-login" onClick={() => navigate('/catalog')}>Browse Catalog</button>
+            </div>
+            </header>
+            <div className="form-login">
+            <form onSubmit={handleSubmit} className="sub-form">
+                <div className="form-grid">
+                    <h2 className="h2-login">Login Form</h2>
+                    <label>Email</label> <br />
+                    <input className="input-login" type="text" name="Email" 
+                    value={email} onChange={(e) => setEmail(e.target.value)} required/><br />
+                    <label>Password</label><br />
+                    <input className="input-login" type="password" name="password"
+                    value={password} onChange={(e) => setPassword(e.target.value)} required/><br />
+                    <div>
+                        <button type="submit" className="btn">Login</button>
+                    </div>
                 </div>
                 {error && (
                     <div style={{color: 'red', marginTop: '10px'}}>{error}</div>
                 )}
             </form>
+            </div>
         </div>
     );
 }

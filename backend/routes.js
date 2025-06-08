@@ -1,27 +1,46 @@
 import express from 'express';
-import { generateToken, authenticateToken, refreshToken } from './auth.js';
+import { generateToken, authenticateToken, authorizeAdmin, refreshToken } from './auth.js';
 import sql from 'mssql';
+import  bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
-const users = [
+/*const users = [
     {id: 1, username: 'admin', password: 'adminpass'} //Demo only (need to delete)
-];
+];*/
 
-router.post('/login', (req, res) => {
-    const {username, password} = req.body;
-    const user = users.find(u => u.username === username && u.password === password);
+router.post('/login', async (req, res) => {
+    const {email, password} = req.body;
+    console.log('Login email: ', email);
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request()
+            .input('Email', sql.NVarChar, email)
+            .query('SELECT UserID, Username, Email, PasswordHash, isAdmin FROM Users WHERE Email = @Email');
+        const user = result.recordset[0];
+        console.log('Query result: ', result.recordset);
+        if (!user){
+            return res.status(401).json({message: 'Invalid credentials'});
+            
+        }
 
-    if(!user) return res.status(401).json({message: 'Invalid credentials'});
-    
-    const token = generateToken(user);
-    res.json({token});
+        const match = await bcrypt.compare(password, user.PasswordHash);
+        if(!match){
+            return res.status(403).json({message: 'Invalid credentials'});
+        }
+
+        const token = generateToken({id: user.UserID, username: user.Username, email: user.Email, isAdmin: user.isAdmin});
+        res.json({token, username: user.Username});
+    } catch(err){
+        console.error('Login error', err);
+        res.status(500).json({message: 'Login failed'});
+    }
 });
 
-router.post('api/refresh-token', refreshToken);
+router.post('/api/refresh-token', refreshToken);
 
-router.get('/admin', authenticateToken, (req, res) => {
+router.get('/admin', authenticateToken, authorizeAdmin, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
 });
 
@@ -105,7 +124,7 @@ router.get('/products', async (req, res) =>{
 });
 
 //inserting a new product
-router.post('/products', authenticateToken, async(req, res) =>{
+router.post('/products', authenticateToken, authorizeAdmin, async(req, res) =>{
     const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty } = req.body;
 
     try{
@@ -134,7 +153,7 @@ router.post('/products', authenticateToken, async(req, res) =>{
 });
 
 //linking the new product with a category
-router.post('/product-category', authenticateToken, async(req, res) =>{
+router.post('/product-category', authenticateToken, authorizeAdmin, async(req, res) =>{
     const {categoryId, productId} = req.body;
 
     try{
@@ -150,7 +169,7 @@ router.post('/product-category', authenticateToken, async(req, res) =>{
 });
 
 //deleting a product by ID
-router.delete('/products/:id', authenticateToken, async(req, res) =>{
+router.delete('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =>{
     const productId = req.params.id;
 
     try{
@@ -165,7 +184,7 @@ router.delete('/products/:id', authenticateToken, async(req, res) =>{
 });
 
 //updating a product by ID
-router.put('/products/:id', authenticateToken, async(req, res) => {
+router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) => {
     const productId = req.params.id;
     const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty} = req.body;
 

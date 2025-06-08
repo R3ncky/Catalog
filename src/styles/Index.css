@@ -1,33 +1,120 @@
+body{
+    background-color: rgb(231, 255, 243);
+}
+header{
+    background-color: rgb(217, 255, 224);
+}
 .index-wrapper{
-    text-align: center;
     padding-top: 20px;
+    margin: auto;
+   
+}
+h1, h2{
+    text-align: center;
+    margin: auto;
+}
+.index-motivation{
+    display: flex;
+    align-items: center;
+    gap:10px;
+    max-width: 2200px;
+    margin: auto;
+}
+.index-motivation p{
+   margin-left: 250px;
+   flex: 1; 
+   font-size: 20px;
+}
+.index-motivation img{
+    margin-top: 60px;
+    max-width: 500px;
+    height: auto;
+    margin-left: 50px;
+    margin-right: 150px;
+    border-radius: 3px;
 }
 .navbar-right-index{
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 30px;
+    margin-top: 20px;
+    
+    
+}
+.right-button-index{
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    font-size: 15px;
+    font-weight: bold;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    margin: auto;
+    cursor: pointer;
+    
+    
+}
+.right-button-index:hover{
+    border-bottom: 2px solid lightsalmon;
 }
 .left-buttons-index{
     padding: 10px 20px;
     margin-top: 20px;
-    background-color: lightgreen;
+    background: none;
+    border: none;
+    font-weight: bold;
+    cursor: pointer; 
+}
+.current-index{
+    padding: 10px 20px;
+    margin-top: 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid lightsalmon;
+    font-weight: bold;
+    color: rgb(243, 103, 47);
     cursor: pointer;
 }
+.left-buttons-index:hover{
+    border-bottom: 2px solid lightsalmon;
+}
 .navbar-index{
-    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 40px;
-    max-width: 2000px;
+    padding: 15px 40px;
+    max-width: 2200px;
     margin: auto;
-    border-bottom: 3px solid lightsalmon;
-    background-color: #fff;
+    border-bottom: 3px solid rgb(255, 160, 122);
 }
 .navbar-left-index{
     display: flex;
     align-items: center;
+    margin: auto;
     gap: 10px;
-    padding-right: 63%;
+    padding-right: 77%;
+}
+.category-box{
+    margin-top: 2rem;
+}
+.category-grid{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+.category-buttons{
+    border: none;
+    background-color: rgb(229, 164, 137);
+    color: white;
+    height: 40px;
+    width: 200px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 17px;
+    font-style: bold;
+}
+.category-buttons:hover{
+    background-color: rgb(250, 140, 93);
 }
