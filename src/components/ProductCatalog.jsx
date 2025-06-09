@@ -18,6 +18,7 @@ export default function ProductCatalog() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedList, setSelectedList] = useState([]);
     const [showListModal, setShowListModal] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const location = useLocation();
     const productsPerPage = 12;
     const navigate = useNavigate();
@@ -52,11 +53,13 @@ export default function ProductCatalog() {
             setToken(token);
         try{
             const payload = JSON.parse(atob(token.split('.')[1]));
-            setUsername(payload.username || '');       
+            setUsername(payload.username || '');   
+            setIsAdmin(payload.isAdmin || false);    
         } catch(err){
             console.warn('Invalid token:', err.message);
             setUsername('');
             setToken(null);
+            setIsAdmin(false);
             localStorage.removeItem('token');
             navigate('/login');
         }
@@ -208,22 +211,25 @@ export default function ProductCatalog() {
     }
 
     let adminButton;
-    if(token){
+    if(token && isAdmin){
         adminButton = (     
-            <button onClick={() => navigate('/admin')} className='left-buttons'>Go To Admin Panel</button>  
+            <button onClick={() => navigate('/admin')} className='left-buttons'>Admin Panel</button>  
         );
     }
     return (
-        <>
+        <div className="page-container">
+            <header>
             <div className="navbar">
-                <HomeButton />
                 <div className="navbar-left">
-                <button className="left-buttons" onClick={() => navigate('/')}>Home</button>
+                <HomeButton />
+                <button className="left-buttons" onClick={() => navigate('/')}>Home</button>              
+                <button className="Current-Button" onClick={() => navigate(0)}>Catalog</button>
                 {adminButton}
-                <button className="Current-Button" onClick={() => navigate(0)}>Browse Catalog</button>
-                </div>
+                </div>           
                 {authSection}              
             </div>
+            </header>
+            <main className="main-content">
             <h2 className="header2">Product Catalog</h2>
             <div className="product-page">
             
@@ -293,7 +299,7 @@ export default function ProductCatalog() {
                             <p><strong>Total (no tax): ${getTotalPrice().toFixed(2)}</strong></p>
                             <p><strong>Total (with tax 20%): ${getTotalWithTax()}</strong></p>
                             <button onClick={handleClearList} className="clear-button">Clear List</button>
-                            <button onClick={() => setShowListModal(false)}>Close</button>
+                            <button onClick={() => setShowListModal(false)} className="close-button">Close</button>
                         </div>
                     </div>
                 )}
@@ -323,8 +329,7 @@ export default function ProductCatalog() {
                     </motion.div>
                 ))}
                 </AnimatePresence>
-            </div>   
-        
+            </div>    
             </div>
             </div>
             <div className="pagination-controls">
@@ -339,6 +344,27 @@ export default function ProductCatalog() {
                 <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
                 <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
             </div>
-        </>
+            </main>
+            <footer className='index-footer'>
+                <div className='footer-content'>  
+                    <div className='footer-section'>
+                        <h4>Company</h4>
+                        <button className='button-footer' onClick={() => {navigate('/aboutus')}}>About us</button>
+                    </div>
+                    <div className='footer-section'>
+                        <h4>Legal</h4>
+                        <button className='button-footer' onClick={() => {navigate('/terms&conditions')}}>Terms & Conditions</button>
+                    </div> 
+                    <div className='footer-section'>
+                        <h4>Social</h4>
+                        <button className='button-footer' onClick={() => window.open('https://swu.bg/bg/', '_blank')}>University</button>
+                        
+                    </div> 
+                </div>
+                <div className='footer-bottom'>
+                    © {(new Date().getFullYear())} Plamen Petrov. All rights reserved. 
+                </div>
+            </footer>
+        </div>
     )
 }

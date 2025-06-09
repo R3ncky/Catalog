@@ -1,4 +1,4 @@
-import { useNavigate} from 'react-router-dom';
+import { Link, useNavigate} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import '../styles/Index.css';
 import HomeButton from './HomeButton';
@@ -94,7 +94,9 @@ export default function Index(){
     if(token){
         authSection = (
             <div className='navbar-right-index'>
+                <div className='welcome-message'>
                 <span>Welcome, {username}</span>
+                </div>
                 <button className='right-button-index' onClick={handleLogOut}>Logout</button>
             </div>
         );
@@ -109,22 +111,24 @@ export default function Index(){
     let adminButton;
     if(token && isAdmin){
         adminButton = (
-            <button onClick={() => navigate('/admin')} className='left-buttons-index'>Go To Admin Panel</button>
+            <button onClick={() => navigate('/admin')} className='left-buttons-index'>Admin Panel</button>
         );
     }
     return (
-        <>
+      
+            <div className='page-container'>
             <header>
             <div className="navbar-index">               
-            <HomeButton />
             <div className='navbar-left-index'>
+            <HomeButton />
             <button className="current-index" onClick={() => navigate(0)}>Home</button>
-            <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Browse Catalog</button>
+            <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
             {adminButton}
             </div>
             {authSection}
-            </div>
+            </div>  
             </header>
+            <main className='main-content'>
             <div className='index-wrapper'>
             <h1>Welcome to the Catalog App</h1>
             <div className='index-motivation'>
@@ -149,9 +153,28 @@ export default function Index(){
               </div>  
             </div>
             </div>
-            <footer>
-
+            </main>
+            <footer className='index-footer'>
+                <div className='footer-content'>  
+                    <div className='footer-section'>
+                        <h4>Company</h4>
+                        <button className='button-footer' onClick={() => {navigate('/aboutus')}}>About us</button>
+                    </div>
+                    <div className='footer-section'>
+                        <h4>Legal</h4>
+                        <button className='button-footer' onClick={() => {navigate('/terms&conditions')}}>Terms & Conditions</button>
+                    </div> 
+                    <div className='footer-section'>
+                        <h4>Social</h4>
+                        <button className='button-footer' onClick={() => window.open('https://swu.bg/bg/', '_blank')}>University</button>
+                        
+                    </div> 
+                </div>
+                <div className='footer-bottom'>
+                    © {(new Date().getFullYear())} Plamen Petrov. All rights reserved. 
+                </div>
             </footer>
-        </>
+            </div>
+        
     )
 }

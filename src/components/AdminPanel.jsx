@@ -10,6 +10,9 @@ export default function AdminPanel(){
     const [isEditing, setIsEditing] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [editForm, setEditForm] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const productsPerPage = 6;
+    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
     const [form, setForm] = useState({
         name: '',
@@ -70,6 +73,11 @@ export default function AdminPanel(){
           };
     }, []);
 
+    useEffect(() => {
+        setCurrentPage(1);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }, [searchTerm]);
+
     //getting the products on load
     useEffect(() => {
         fetch('http://localhost:5000/api/products', {
@@ -82,7 +90,8 @@ export default function AdminPanel(){
 
     useEffect(() => {
         fetch('http://localhost:5000/api/categories')
-        .then(res => res.json()).then(data => setCategories(data)).catch(err => console.error('Fetch categories error: ', err));
+        .then(res => res.json()).then(data => {setCategories(data);
+            setCurrentPage(1);}).catch(err => console.error('Fetch categories error: ', err));
     }, []);
 
     const HandleDelete = async(id) => {
@@ -213,26 +222,36 @@ export default function AdminPanel(){
         }
     };
 
+    const filteredProducts = products.filter(product => product.Name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+    const indexOfLast = currentPage * productsPerPage;
+    const indexOfFirst = indexOfLast - productsPerPage;
+    const currentProducts = filteredProducts.slice(indexOfFirst, indexOfLast);
+
+    const goToFirst = () => setCurrentPage(1);
+    const goToPrev = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+    const goToNext = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+    const goToLast = () => setCurrentPage(totalPages);
+
     return(
         <div style={{maxWidth: '800px', margin: 'auto'}}>
             <HomeButton />
             <h2>Admin Panel</h2>
             <button onClick={() => setIsAdding(true)} style={{marginBottom: '1rem'}}>Add New Product</button>
+            <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input"/>
             <div>
-                {products.map(product =>(
-                    <div key={product.ProductID} style={{border: '1px solid gray', padding: '1rem', marginBottom: '1rem'}}>
-                        <img src={`/assets/${product.ImagePath}`} alt={product.Name}
-                        style={{width: '120px', height: '120px', objectFit: 'cover', marginRight: '1rem'}} />
+                {currentProducts.map(product =>(
+                    <div key={product.ProductID} className="product-horizontal-card">
+                        <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-horizontal-image" />
+                        <div className="product-info">
                         <h3>{product.Name}</h3>
-                        <p>{product.Description}</p>
-                        <p><strong>Price ${product.Price}</strong></p>
-                        <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
-                        {product.DiscountPercentage && product.DiscountMinQty && (
-                            <p><strong>Discount: </strong>Buy {product.DiscountMinQty}+ and get {product.DiscountPercentage}% Off!</p> 
-                        )}
+                        <p>{product.Description}</p>                    
                         <p>Status: {product.Status}</p>
+                        </div>
+                        <div className="product-actions">
                         <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
                         <button onClick={() => startEdit(product)}>Edit</button>
+                        </div>
                     </div>                  
                 ))}
             </div>
@@ -282,6 +301,18 @@ export default function AdminPanel(){
                     </div>
                 </div>
             )}
+            <div className="pagination-controls">
+                <button onClick={goToFirst} disabled={currentPage === 1}>First</button>
+                <button onClick={goToPrev} disabled={currentPage === 1}>Previous</button>
+                {[...Array(totalPages)].map((_,i) => (
+                    <button key={i} onClick={() => setCurrentPage(i+1)} 
+                    className={currentPage === i + 1 ? 'active-page' : ''}>
+                        {i+1}
+                    </button>
+                ))}
+                <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
+                <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
+            </div>
         </div>
     )
 }

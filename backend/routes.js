@@ -12,14 +12,12 @@ const router = express.Router();
 
 router.post('/login', async (req, res) => {
     const {email, password} = req.body;
-    console.log('Login email: ', email);
     try{
         const pool = await sql.connect();
         const result = await pool.request()
             .input('Email', sql.NVarChar, email)
             .query('SELECT UserID, Username, Email, PasswordHash, isAdmin FROM Users WHERE Email = @Email');
         const user = result.recordset[0];
-        console.log('Query result: ', result.recordset);
         if (!user){
             return res.status(401).json({message: 'Invalid credentials'});
             
@@ -174,6 +172,7 @@ router.delete('/products/:id', authenticateToken, authorizeAdmin, async(req, res
 
     try{
         const pool = await sql.connect();
+        await pool.request().input('ProductID', sql.Int ,productId).query('DELETE FROM CategoryProduct WHERE ProductID = @ProductID');
         await pool.request().input('ProductID', sql.Int, productId).query('DELETE FROM Product WHERE ProductID = @ProductID');
         
         res.json({message: 'Product deleted successfully'});

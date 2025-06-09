@@ -37,9 +37,11 @@ export default function LoginForm(){
         <div>
             <header>
             <div className="navbar-login">
+                <div className="navbar-left-login">
                 <HomeButton />
                 <button className="left-buttons-login" onClick={() => navigate('/')}>Home</button>
-                <button className="left-buttons-login" onClick={() => navigate('/catalog')}>Browse Catalog</button>
+                <button className="left-buttons-login" onClick={() => navigate('/catalog')}>Catalog</button>
+                </div>
             </div>
             </header>
             <div className="form-login">

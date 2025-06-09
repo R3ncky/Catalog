@@ -5,7 +5,8 @@ import AdminPanel from './components/AdminPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import Index from './components/Index';
 import ProductCatalog from './components/ProductCatalog';
-import HomeButton from './components/HomeButton';
+import AboutUs from './components/AboutUs';
+import TermsConditions from './components/TermsConditions';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path='/aboutus' element={<AboutUs/>}/>
+        <Route path='/terms&conditions' element={<TermsConditions />}/>
         <Route path="/catalog" element={<ProductCatalog/>} />
         <Route path="/login" element={<LoginForm />} />
         <Route 
