@@ -1,0 +1,16 @@
+.about-us-container{
+    text-align: center;
+    padding: 40px;
+}
+.about-us-image{
+    max-width: 900px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+}
+.about-us-text{
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: left;
+    padding: 0 20px;
+}

@@ -36,6 +36,35 @@ router.post('/login', async (req, res) => {
     }
 });
 
+//registering
+router.post('/register', async (req, res) => {
+    const {username, email, password, isAdmin} = req.body;
+    try{
+        const pool = await sql.connect();
+        
+        const userCheck = await pool.request().input('Email', sql.NVarChar, email).query('SELECT * FROM Users WHERE Email = @Email');
+        if(userCheck.recordset.length > 0){
+            return res.status(403).json({message: 'User already exists'});
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const result = await pool.request()
+                        .input('Username', sql.NVarChar, username)
+                        .input('Email', sql.NVarChar, email)
+                        .input('PasswordHash', sql.NVarChar, hashedPassword)
+                        .query(`INSERT INTO Users (Username, Email, PasswordHash, IsAdmin)
+                                OUTPUT INSERTED.UserID
+                                VALUES (@Username, @Email, @PasswordHash, 0)`);
+        const newUserID = result.recordset[0].UserID;
+        res.status(201).json({message: 'Registered user successfully', userId:newUserID});
+
+    } catch(err){
+        console.error('Error message: ', err);
+        res.status(500).json({message: 'Registration failed'});
+    }
+});
+
 router.post('/api/refresh-token', refreshToken);
 
 router.get('/admin', authenticateToken, authorizeAdmin, (req, res) => {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import HomeButton from "./HomeButton";
 import { useNavigate } from "react-router-dom";
 import '../styles/AdminPanel.css';
+import {motion, AnimatePresence} from 'framer-motion';
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
@@ -9,7 +10,11 @@ export default function AdminPanel(){
     const [selectedCategory, setSelectedCategory] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
     const [editForm, setEditForm] = useState(null);
+    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 6;
     const [searchTerm, setSearchTerm] = useState('');
@@ -108,6 +113,31 @@ export default function AdminPanel(){
         }
     };
 
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        try{
+            const res = await fetch('http://localhost:5000/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                }, 
+                body: JSON.stringify({username, email, password}),
+            });
+
+            if(res.ok){
+                console.log('User registered', data);
+                setUsername('');
+                setEmail('');
+                setPassword('');
+                window.location.reload();
+            } else{
+                alert('Registration failed');
+            }
+        } catch(err){
+            console.error('Registration error ', err);
+        }
+    }
     
     const handleChange = (e) =>{
         const fieldName = e.target.name;
@@ -234,70 +264,100 @@ export default function AdminPanel(){
     const goToLast = () => setCurrentPage(totalPages);
 
     return(
-        <div style={{maxWidth: '800px', margin: 'auto'}}>
-            <HomeButton />
+        <div>
+            <header>
+                <div className="navbar-index">               
+                <div className='navbar-left-index'>
+                <HomeButton />
+                <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
+                <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
+                <button className="current-index" onClick={() => navigate(0)}>Admin Panel</button>
+                </div>
+                </div>  
+                </header>
+        <div className="admin-body">
             <h2>Admin Panel</h2>
-            <button onClick={() => setIsAdding(true)} style={{marginBottom: '1rem'}}>Add New Product</button>
-            <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input"/>
+            <button onClick={() => setIsAdding(true)} className="add-button">Add New Product</button>
+            <button onClick={() => setIsRegistering(true)} className='add-button'>Add new User</button>
+            <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input-admin"/>
             <div>
+                <AnimatePresence>
                 {currentProducts.map(product =>(
-                    <div key={product.ProductID} className="product-horizontal-card">
+                    <motion.div key={product.ProductID} className="product-horizontal-card"
+                    initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} 
+                    exit={{opacity: 0}} transition={{duration: 0.4}}>
                         <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-horizontal-image" />
                         <div className="product-info">
                         <h3>{product.Name}</h3>
-                        <p>{product.Description}</p>                    
+                        <p>{product.Description}</p>  
+                        <p>${product.Price}</p>                  
                         <p>Status: {product.Status}</p>
                         </div>
                         <div className="product-actions">
                         <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
                         <button onClick={() => startEdit(product)}>Edit</button>
                         </div>
-                    </div>                  
+                    </motion.div>                  
                 ))}
+                </AnimatePresence>
             </div>
             {isEditing && editForm && (
                 <div className="edit-modal">
                     <div className="edit-grid">
                         <h3>Edit Product</h3>
-                        <input name="name" value={editForm.name} onChange={handleEditChange} placeholder="Name"/><br />
-                        <textarea name="description" value={editForm.description} onChange={handleEditChange} placeholder="Description" /><br />
-                        <input name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" /><br />
-                        <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" /><br />
-                        <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  /><br />
-                        <input name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" /><br />
-                        <input name="status" value={editForm.status} onChange={handleEditChange} placeholder="Status" /><br />
-                        <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange}/>Featured</label><br />
-                        <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange}/>Archived</label><br />
-                        <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} /><br />
-                        <input type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange}/><br />
-                        <button onClick={handleEditSubmit}>Post</button>
-                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}}>Cancel</button>
+                        <input name="name" value={editForm.name} onChange={handleEditChange} placeholder="Name" style={{marginBottom: '1rem'}}/><br />
+                        <textarea name="description" value={editForm.description} onChange={handleEditChange} placeholder="Description" style={{marginBottom: '1rem'}}/><br />
+                        <input name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" style={{marginBottom: '1rem'}}/><br />
+                        <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" style={{marginBottom: '1rem'}}/><br />
+                        <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  style={{marginBottom: '1rem'}}/><br />
+                        <input name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" style={{marginBottom: '1rem'}}/><br />
+                        <input name="status" value={editForm.status} onChange={handleEditChange} placeholder="Status" style={{marginBottom: '1rem'}}/><br />
+                        <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
+                        <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
+                        <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
+                        <input type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
+                        <button onClick={handleEditSubmit} style={{marginBottom: '1rem'}}>Post</button><br />
+                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}} style={{marginBottom: '1rem'}}>Cancel</button>
                     </div>
                 </div>
             )}
             {isAdding && (
                 <div className="edit-modal">
                     <div className="edit-grid">
-                         <h3>Add New</h3>
+                         <h3>Add New Product</h3>
                          <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
-                            <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required /><br />
-                            <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required /><br />
-                            <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required/><br />
-                            <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} /><br />
-                            <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} /><br />
-                            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required>
+                            <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
+                            <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
+                            <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
+                            <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
+                            <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
+                            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required style={{marginBottom: '1rem'}}>
                             <option value="">Select a Category</option>
                                 {categories.map(cat => (
                                 <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
                                 ))}
                             </select><br />
-                            <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} /><br />
-                            <input name="status" placeholder="Status" value={form.status} onChange={handleChange} /><br />
-                            <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />Featured</label><br />
-                            <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} />Archived</label><br />
-                            <button type="submit">Post</button>
-                            <button type="button" onClick={() => setIsAdding(false)}>Cancel</button>
+                            <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
+                            <input name="status" placeholder="Status" value={form.status} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
+                            <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
+                            <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
+                            <button type="submit" style={{marginBottom: '1rem'}}>Post</button><br/>
+                            <button type="button" onClick={() => setIsAdding(false)} style={{marginBottom: '1rem'}}>Cancel</button>
                          </form>
+                    </div>
+                </div>
+            )}
+            {isRegistering && (
+                <div className="edit-modal">
+                    <div className="edit-grid">
+                        <h3>Add New User</h3>
+                        <form onSubmit={handleRegister} style={{marginBottom: '2rem'}}>
+                            <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
+                            <input type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
+                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
+                            <button type="submit" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Register</button><br />
+                            <button type="button" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Cancel</button><br />
+                        </form>
                     </div>
                 </div>
             )}
@@ -312,6 +372,7 @@ export default function AdminPanel(){
                 ))}
                 <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
                 <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
+            </div>
             </div>
         </div>
     )

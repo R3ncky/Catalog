@@ -18,9 +18,12 @@
     max-height: 90vh;
     overflow-y: auto;
 }
+.form-group{
+    margin-bottom: 1rem;
+}
 .product-horizontal-card{
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     border: 1px solid gray;
     padding: 1rem;
@@ -28,6 +31,7 @@
     background-color: #fafafa;
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    gap: 1rem;
 }
 .product-horizontal-image{
     width: 120px;
@@ -44,14 +48,13 @@
     flex-direction: column;
 }
 .product-info{
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+    flex: 1;
 }
 .product-actions{
     margin-top: auto;
     display: flex;
     gap: 10px;
+    flex-direction: row;
 }
 .product-actions button{
     padding: 6px 12px;
@@ -70,4 +73,28 @@
 }
 .search-input{
     margin-bottom: 10px;
+}
+.admin-body{
+    max-width: 800px;
+    margin: auto;
+}
+.search-input-admin{
+    padding: 0.5rem;   
+    font-size: 1rem;
+    width: 100%;
+    max-width: 780px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+.add-button{
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;   
+    background-color: #3498db;
+    color: white;
+    margin-right: 1rem; 
 }
