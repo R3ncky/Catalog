@@ -3,6 +3,8 @@ import HomeButton from "./HomeButton";
 import '../styles/ProductCatalog.css';
 import { useLocation, useNavigate } from "react-router-dom";
 import {motion, AnimatePresence} from 'framer-motion';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 
 export default function ProductCatalog() {
@@ -18,6 +20,8 @@ export default function ProductCatalog() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedList, setSelectedList] = useState([]);
     const [showListModal, setShowListModal] = useState(false);
+    const [quantities, setQuantities] = useState({});
+    const [removalQuantities, setRemovalQuantities] = useState({});
     const [isAdmin, setIsAdmin] = useState(false);
     const location = useLocation();
     const productsPerPage = 12;
@@ -135,16 +139,32 @@ export default function ProductCatalog() {
           };
     }, []);
 
+    const handleQuantityChange = (productId, value) => {
+        const qty = parseInt(value);
+        if(!isNaN(qty) && qty >= 0) {
+            setQuantities(prev => ({...prev, [productId]: qty}));
+        }
+    };
+
+    const handleListQuantityChange = (productId, value) => {
+        const qty = parseInt(value);
+        if(!isNaN(qty) && qty >= 1) {
+            setSelectedList(prev => prev.map(p => p.ProductID === productId ? {...p, quantity: qty} : p));
+        }
+    };
+
     const handleAddList = (product) => {
+        const quantity = quantities[product.ProductID] || 1;
         setSelectedList(prev => {
             const existing = prev.find(p => p.ProductID === product.ProductID);
             if(existing) {
                 return prev.map(p =>
-                    p.ProductID === product.ProductID ? {...p, quantity: p.quantity + 1} : p);
+                    p.ProductID === product.ProductID ? {...p, quantity: p.quantity + quantity} : p);
             } else {
-                return [...prev, {...product, quantity: 1}];
+                return [...prev, {...product, quantity }];
             }
         });
+        setQuantities(prev => ({...prev, [product.ProductID]: 1})); 
     };
 
     const handleRemoveList = (productId) => {
@@ -153,6 +173,69 @@ export default function ProductCatalog() {
 
     const handleClearList = () => {
         setSelectedList([]);
+    };
+
+    const exportListAsTxt = () => {
+        if(selectedList.length === 0) {
+            return;
+        }
+
+        let content = 'Your Selected Products:\n\n';
+        selectedList.forEach(product => {
+            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+            const total = (pricePerUnit * product.quantity).toFixed(2);
+            content += `${product.Name}\n`;
+            content += `Quantity: ${product.quantity}\n`;
+            content += `Price per unit: $${pricePerUnit.toFixed(2)}\n`;
+            if(hasDiscount) {
+                content += `Discount: ${product.DiscountPercentage}% Off\n`;
+            }
+            content += `Total: $${total}\n\n`;
+        });
+        content += `Total Price (no tax): $${getTotalPrice().toFixed(2)}\n`;
+        content += `Total Price (with tax 20%): $${getTotalWithTax()}\n`;
+        const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'selected_products.txt';
+        link.click();
+    };
+
+    const exportListAsExcel = async () => {
+        if(selectedList.length === 0) {
+            return;
+        }
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Selected Products');
+
+        worksheet.columns = [
+            { header: 'Product Name', key: 'name', width: 30 },
+            { header: 'Quantity', key: 'quantity', width: 10 },
+            { header: 'Price per Unit', key: 'pricePerUnit', width: 15 },
+            { header: 'Total Price', key: 'totalPrice', width: 15 },
+            { header: 'Discount', key: 'discount', width: 15 }
+        ];
+
+        selectedList.forEach(product => {
+            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+            const totalPrice = (pricePerUnit * product.quantity).toFixed(2);
+            worksheet.addRow({
+                name: product.Name,
+                quantity: product.quantity,
+                pricePerUnit: pricePerUnit.toFixed(2),
+                totalPrice: totalPrice,
+                discount: hasDiscount ? `${product.DiscountPercentage}% Off` : 'No Discount'
+            });
+        });
+        worksheet.addRow({});
+        worksheet.addRow({ name: 'Total Price (no tax)', totalPrice: getTotalPrice().toFixed(2) });
+        worksheet.addRow({ name: 'Total Price (with tax 20%)', totalPrice: getTotalWithTax() });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, 'selected_products.xlsx');
     };
 
     const getTotalPrice = () => {
@@ -268,7 +351,7 @@ export default function ProductCatalog() {
             <div className="search-bar">
                 <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input"/>
                 { token && (
-                <button onClick={() => setShowListModal(true)} className="show-list-button">Show List ({selectedList.length})</button>
+                 <button onClick={() => setShowListModal(true)} className="show-list-button">Show List ({selectedList.length})</button>
                 )}
                 { showListModal && (
                     <div className="list-modal">
@@ -285,11 +368,30 @@ export default function ProductCatalog() {
 
                                         const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
                                         const totalPrice = (pricePerUnit *  product.quantity).toFixed(2);
+                                        const removeQty = removalQuantities[product.ProductID] || 1;
                                         return(
-                                        <li key={product.ProductID} className="modal-item">
-                                            {product.Name} (x{product.quantity}) - ${totalPrice}
-                                            {hasDiscount && <span className="discount-tag">-{product.DiscountPercentage}%</span>}
-                                            <button onClick={() => handleRemoveList(product.ProductID)} className="remove-button">Remove</button>
+                                        <li key={product.ProductID} className="modal-list">
+                                            <div className="modal-item-details">
+                                                <span>{product.Name}:</span>
+                                                <span>{product.quantity}</span>
+                                                <input type="number" min={1} max={product.quantity} value={removeQty} 
+                                                onChange={e => setRemovalQuantities(prev => ({...prev, [product.ProductID]: parseInt(e.target.value) || 1}))} 
+                                                className="quantity-input" />
+                                                <span>${totalPrice}</span>
+                                                {hasDiscount && (
+                                                    <span className="discount-tag">
+                                                        {product.DiscountPercentage}% Off
+                                                    </span>
+                                                )}
+                                            
+                                            <button onClick={() => {
+                                                const qtyToRemove = removalQuantities[product.ProductID] || 1;
+                                                setSelectedList(prev => prev.map(p => 
+                                                    p.ProductID === product.ProductID ? {...p, quantity: p.quantity - qtyToRemove} : p).filter(p => p.quantity > 0));
+                                                setRemovalQuantities(prev => ({...prev, [product.ProductID]: 1}));
+                                            }} 
+                                            className="remove-button">Remove</button>
+                                          </div>  
                                         </li>
                                         );
                                     })}
@@ -299,6 +401,8 @@ export default function ProductCatalog() {
                             <p><strong>Total (no tax): ${getTotalPrice().toFixed(2)}</strong></p>
                             <p><strong>Total (with tax 20%): ${getTotalWithTax()}</strong></p>
                             <button onClick={handleClearList} className="clear-button">Clear List</button>
+                            <button onClick={exportListAsTxt} className="close-button">Export as TXT</button>
+                            <button onClick={exportListAsExcel} className="close-button">Export as Excel</button>
                             <button onClick={() => setShowListModal(false)} className="close-button">Close</button>
                         </div>
                     </div>
@@ -324,7 +428,10 @@ export default function ProductCatalog() {
                             </>
                         )}
                         { token && (
-                        <button className="add-to-list-button" onClick={() => handleAddList(product)}>Add To List</button>
+                        <div className="list-button-container">
+                            <input type="number" min="1" className="quantity-input" value={quantities[product.ProductID] || 1} onChange={e => handleQuantityChange(product.ProductID, e.target.value)} />
+                            <button className="add-to-list-button" onClick={() => handleAddList(product)}>Add to List</button>
+                        </div>
                         )}
                     </motion.div>
                 ))}

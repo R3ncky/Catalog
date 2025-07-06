@@ -178,6 +178,20 @@
 .filter-section{
     padding-left: 20px;
 }
+.list-button-container{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+.quantity-input{
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
 .add-to-list-button{
     margin-top: 5px;
     padding: 5px 10px;
@@ -203,7 +217,7 @@
     position: fixed;
     top: 10%;
     right: 0;
-    width: 300px;
+    width: 400px;
     height: 80%;
     background-color: white;
     border-left: 2px solid #ccc;
@@ -220,6 +234,26 @@
     max-height: 60%;
     overflow-y: auto;
     margin-bottom: 10px;
+}
+.modal-item-details{
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.modal-item-input.quantity-input{
+    width: 60px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+
+}
+.modal-list span,
+.modal-list input,
+.modal-list button{
+    white-space: nowrap;
 }
 .remove-button{
     border: none;
@@ -240,4 +274,5 @@
     border-radius: 5px;
     padding: 6px 12px;
     cursor: pointer;
+    margin-bottom: 1rem;
 }

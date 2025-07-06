@@ -126,10 +126,10 @@ export default function AdminPanel(){
             });
 
             if(res.ok){
-                console.log('User registered', data);
                 setUsername('');
                 setEmail('');
                 setPassword('');
+                setIsRegistering(false);
                 window.location.reload();
             } else{
                 alert('Registration failed');
@@ -355,7 +355,7 @@ export default function AdminPanel(){
                             <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
                             <input type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
                             <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
-                            <button type="submit" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Register</button><br />
+                            <button type="submit"  style={{marginBottom: '1rem'}}>Register</button><br />
                             <button type="button" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Cancel</button><br />
                         </form>
                     </div>
