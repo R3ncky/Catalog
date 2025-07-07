@@ -217,6 +217,8 @@ export default function AdminPanel(){
             isArchived: product.IsArchived ?? false,
             discountPercentage: product.DiscountPercentage ?? '',
             discountMinQty: product.DiscountMinQty ?? '',
+            discountStart: product.DiscountStart ?? '',
+            discountEnd: product.DiscountEnd ?? '',
             ProductID: product.ProductID
         });
         setIsEditing(true);
@@ -316,6 +318,8 @@ export default function AdminPanel(){
                         <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
                         <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
                         <input type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
+                        <input type="datetime-local" name="discountStart" placeholder="Discount Start" value={editForm.discountStart} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
+                        <input type="datetime-local" name="discountEnd" placeholder="Discount End" value={editForm.discountEnd} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
                         <button onClick={handleEditSubmit} style={{marginBottom: '1rem'}}>Post</button><br />
                         <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}} style={{marginBottom: '1rem'}}>Cancel</button>
                     </div>

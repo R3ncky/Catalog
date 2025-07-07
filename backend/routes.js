@@ -214,7 +214,7 @@ router.delete('/products/:id', authenticateToken, authorizeAdmin, async(req, res
 //updating a product by ID
 router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) => {
     const productId = req.params.id;
-    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty} = req.body;
+    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty, discountStart, discountEnd} = req.body;
 
     try{
         const pool = await sql.connect();
@@ -231,6 +231,8 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                 .input('IsArchived', sql.Bit, isArchived)
                 .input('DiscountPercentage', sql.Int, discountPercentage)
                 .input('DiscountMinQty', sql.Int, discountMinQty)
+                .input('DiscountStart', sql.DateTime, discountStart || null) 
+                .input('DiscountEnd', sql.DateTime, discountEnd || null)
                 .query(`UPDATE Product SET
                             Name = @Name,
                             Description = @Description,
@@ -242,7 +244,9 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                             IsFeatured = @IsFeatured,
                             IsArchived = @IsArchived,
                             DiscountPercentage = @DiscountPercentage,
-                            DiscountMinQty = @DiscountMinQty
+                            DiscountMinQty = @DiscountMinQty,
+                            DiscountStart = @DiscountStart,
+                            DiscountEnd = @DiscountEnd
                         WHERE ProductID = @ProductID`);
                 
         if(result.rowsAffected[0] === 0){
@@ -252,6 +256,45 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
     } catch(err){
         console.error(err);
         res.status(500).json({message: 'Failed to update product'});
+    }
+});
+
+//updating the product stock quantity
+router.post('/update-stock', authenticateToken, async(req, res) => {
+    const {products } = req.body;
+
+    if(!Array.isArray(products) || products.length === 0){
+        return res.status(400).json({message: 'Invalid request, products array is required'});
+    }
+    try{
+        const pool = await sql.connect();
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
+
+        for(const item of products){
+            const {ProductID, quantity} = item;
+            const checkStockResult = await transaction.request()
+                .input('ProductID', sql.Int, ProductID)
+                .query('SELECT StockQty FROM Product WHERE ProductID = @ProductID');
+            const currentStock = checkStockResult.recordset[0]?.StockQty;
+            if(currentStock === undefined) {
+                await transaction.rollback();
+                return res.status(404).json({message: `Product with ID ${ProductID} not found`});
+            }
+            if(currentStock < quantity){
+                await transaction.rollback();
+                return res.status(400).json({message: `Insufficient stock for product ID ${ProductID}. Current stock: ${currentStock}, requested: ${quantity}`});
+            }
+            await transaction.request()
+                .input('ProductID', sql.Int, ProductID)
+                .input('Quantity', sql.Int, quantity)
+                .query('UPDATE Product SET StockQty = StockQty - @Quantity WHERE ProductID = @ProductID');
+        }
+        await transaction.commit();
+        res.json({message: 'Stock quantity updated successfully'});
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({message: 'Failed to update stock quantity'});
     }
 });
 export default router;

@@ -154,14 +154,22 @@ export default function ProductCatalog() {
     };
 
     const handleAddList = (product) => {
-        const quantity = quantities[product.ProductID] || 1;
+        const quantityToAdd = quantities[product.ProductID] || 1;
+        const availablestock = product.StockQty || 0;
         setSelectedList(prev => {
             const existing = prev.find(p => p.ProductID === product.ProductID);
+            const existingQty = existing ? existing.quantity : 0;
+            const totalAfterAdd = existingQty + quantityToAdd;
+
+            if(totalAfterAdd > availablestock) {
+                alert(`Cannot add more than available stock (${availablestock}) for ${product.Name}.`);
+                return prev;
+            }
             if(existing) {
                 return prev.map(p =>
-                    p.ProductID === product.ProductID ? {...p, quantity: p.quantity + quantity} : p);
+                    p.ProductID === product.ProductID ? {...p, quantity: totalAfterAdd} : p);
             } else {
-                return [...prev, {...product, quantity }];
+                return [...prev, {...product, quantity: quantityToAdd }];
             }
         });
         setQuantities(prev => ({...prev, [product.ProductID]: 1})); 
@@ -200,6 +208,29 @@ export default function ProductCatalog() {
         link.href = URL.createObjectURL(blob);
         link.download = 'selected_products.txt';
         link.click();
+
+        fetch('http://localhost:5000/api/update-stock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ products: selectedList.map(product => ({ ProductID: product.ProductID, quantity: product.quantity }))})
+        })
+        .then(res => {
+            if(!res.ok) {
+                throw new Error('Failed to update stock');
+            }
+            return res.json();
+
+        }).then(data => {
+            console.log('Stock updated successfully:', data);
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }).catch(err => {
+            console.error('Error updating stock:', err);
+        });
     };
 
     const exportListAsExcel = async () => {
@@ -236,6 +267,29 @@ export default function ProductCatalog() {
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, 'selected_products.xlsx');
+
+        fetch('http://localhost:5000/api/update-stock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ products: selectedList.map(product => ({ ProductID: product.ProductID, quantity: product.quantity }))})
+        })
+        .then(res => {
+            if(!res.ok) {
+                throw new Error('Failed to update stock');
+            }
+            return res.json();
+
+        }).then(data => {
+            console.log('Stock updated successfully:', data);
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }).catch(err => {
+            console.error('Error updating stock:', err);
+        });
     };
 
     const getTotalPrice = () => {
@@ -417,13 +471,14 @@ export default function ProductCatalog() {
                         <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-image" />
                         <h3>{product.Name}</h3>
                         <p>{product.Description}</p>
-                        <p>Status: {product.Status}</p>
+                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'In Stock'}</p>
+                        <p>In Stock: {product.StockQty}</p>
                         {product.Price !== undefined && (
                             <>
                             <p><strong>Price: ${product.Price}</strong></p>
                             <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
-                            {product.DiscountPercentage && product.DiscountMinQty && (
-                            <p><strong>Discount: </strong>Buy {product.DiscountMinQty}+ and get {product.DiscountPercentage}% Off!</p>
+                            {product.DiscountPercentage && product.DiscountMinQty && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
+                            <p><strong>Discount: </strong>Buy {product.DiscountMinQty}+ and get {product.DiscountPercentage}% Off! <br /> Valid until {new Date(product.DiscountEnd).toLocaleDateString()}</p>
                             )}
                             </>
                         )}
