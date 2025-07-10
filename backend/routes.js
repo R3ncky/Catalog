@@ -297,4 +297,65 @@ router.post('/update-stock', authenticateToken, async(req, res) => {
         res.status(500).json({message: 'Failed to update stock quantity'});
     }
 });
+
+//getting the registered users
+router.get('/users', authenticateToken, authorizeAdmin, async(req, res) => {
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request().query('SELECT UserID, Username, Email, isAdmin FROM Users');
+        res.json(result.recordset);
+    } catch(err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({message: 'Failed to fetch users'});
+    }
+}
+);
+//updating a user by ID
+router.put('/users/:id', authenticateToken, authorizeAdmin, async(req, res) => {
+    const userId = req.params.id;
+    const {username, email, isAdmin, password} = req.body;
+
+    if(!username || !email || typeof isAdmin === 'undefined') {
+        return res.status(400).json({message: 'Missing required fields: username, email, isAdmin'});
+    }
+    try{
+        const pool = await sql.connect();
+        const request = pool.request()
+                .input('UserID', sql.Int, userId)
+                .input('Username', sql.NVarChar, username)
+                .input('Email', sql.NVarChar, email)
+                .input('IsAdmin', sql.Bit, isAdmin)
+            let query = `
+                UPDATE Users SET
+                    Username = @Username,
+                    Email = @Email,
+                    IsAdmin = @IsAdmin`;
+            if(password && password.trim() !== '') {
+                const hashedPassword = await bcrypt.hash(password, 10);
+                request.input('PasswordHash', sql.NVarChar, hashedPassword);
+                query += `, PasswordHash = @PasswordHash`;
+            }   
+            query += ` WHERE UserID = @UserID`;    
+        await request.query(query);     
+        res.json({message: 'User updated successfully'});
+    } catch(err) {
+        console.error('Error updating user:', err.message, err.stack);
+        res.status(500).json({message: 'Failed to update user'});
+    }
+});
+
+//deleting a user by ID
+router.delete('/users/:id', authenticateToken, authorizeAdmin, async(req, res) => {
+    const userId = req.params.id;
+
+    try{
+        const pool = await sql.connect();
+        await pool.request().input('UserID', sql.Int, userId).query('DELETE FROM Users WHERE UserID = @UserID');
+        res.json({message: 'User deleted successfully'});
+    } catch(err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({message: 'Failed to delete user'});
+    }
+});
+
 export default router;
