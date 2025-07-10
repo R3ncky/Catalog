@@ -315,6 +315,7 @@ router.put('/users/:id', authenticateToken, authorizeAdmin, async(req, res) => {
     const userId = req.params.id;
     const {username, email, isAdmin, password} = req.body;
 
+    
     if(!username || !email || typeof isAdmin === 'undefined') {
         return res.status(400).json({message: 'Missing required fields: username, email, isAdmin'});
     }

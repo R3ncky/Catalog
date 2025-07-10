@@ -15,6 +15,11 @@ export default function AdminPanel(){
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [users, setUsers] = useState([]);
+    const [isEditingUser, setIsEditingUser] = useState(false);
+    const [showProducts, setShowProducts] = useState(true);
+    const [showUsers, setShowUsers] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 6;
     const [searchTerm, setSearchTerm] = useState('');
@@ -93,13 +98,31 @@ export default function AdminPanel(){
         .then(res => res.json()).then(data => setProducts(data)).catch(err => console.error('Fetch error: ', err));
     }, []);
 
+    //getting the users
+    useEffect(() => {
+        fetch('http://localhost:5000/api/users', {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+        .then(res => res.json()).then(data => setUsers(data)).catch(err => console.error('Fetch users error: ', err));
+    }, []);
+
+    //getting the categories 
     useEffect(() => {
         fetch('http://localhost:5000/api/categories')
         .then(res => res.json()).then(data => {setCategories(data);
             setCurrentPage(1);}).catch(err => console.error('Fetch categories error: ', err));
     }, []);
 
+    useEffect(() => {
+        setCurrentPage(1);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }, [showProducts, showUsers]);
+
     const HandleDelete = async(id) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this product?');
+        if(!confirmDelete) return;
         try {
             await fetch(`http://localhost:5000/api/products/${id}`, {
                 method: 'DELETE',
@@ -254,11 +277,81 @@ export default function AdminPanel(){
         }
     };
 
+    const startEditUser = (user) => {
+        setEditingUser({
+            UserID: user.UserID,
+            Username: user.Username ?? '',
+            Email: user.Email ?? '',
+            IsAdmin: user.IsAdmin ?? false,
+            Password: '' 
+        });
+        setIsEditingUser(true);
+    };
+
+    const handleUserEditChange = (e) => {
+        const {name, value, type, checked} = e.target;
+        setEditingUser(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleUserUpdate = async () => {
+        
+        const userToSend = {
+            username: editingUser.Username,
+            email: editingUser.Email,
+            isAdmin: editingUser.IsAdmin
+        };
+
+        if(editingUser.Password && editingUser.Password.trim() !== ''){
+            userToSend.password = editingUser.Password;
+        }
+        try {
+            const res = await fetch(`http://localhost:5000/api/users/${editingUser.UserID}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(userToSend)
+            });
+            if(res.ok){
+                setIsEditingUser(false);
+                setEditingUser(null);
+                window.location.reload();
+            } else {
+                const errData = await res.json();
+                alert('Failed to update user');
+            }
+        } catch(err) {
+            console.error('Update user error: ', err);
+        }
+    };
+
+    const handleUserDelete = async (id) => {
+        const confirmDelete = window.confirm('Are you sure you want to delete this user?');
+        if(!confirmDelete) return;
+        try {
+            const res = await fetch(`http://localhost:5000/api/users/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });  
+            setUsers(users.filter(user => user.UserID !== id));
+        } catch(err) {
+            console.error('Delete user error: ', err);
+        }
+    };
+
     const filteredProducts = products.filter(product => product.Name.toLowerCase().includes(searchTerm.toLowerCase()));
-    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+    const filteredUsers = users.filter(user => user.Username.toLowerCase().includes(searchTerm.toLowerCase()));
+    const activeItems = showProducts ? filteredProducts : filteredUsers;
+    const totalPages = Math.ceil(activeItems.length / productsPerPage);
     const indexOfLast = currentPage * productsPerPage;
     const indexOfFirst = indexOfLast - productsPerPage;
-    const currentProducts = filteredProducts.slice(indexOfFirst, indexOfLast);
+    const currentItems = activeItems.slice(indexOfFirst, indexOfLast);
 
     const goToFirst = () => setCurrentPage(1);
     const goToPrev = () => setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -281,10 +374,13 @@ export default function AdminPanel(){
             <h2>Admin Panel</h2>
             <button onClick={() => setIsAdding(true)} className="add-button">Add New Product</button>
             <button onClick={() => setIsRegistering(true)} className='add-button'>Add new User</button>
+            <button onClick={() => {setShowProducts(true); setShowUsers(false);}} className='add-button'>Products</button>
+            <button onClick={() => {setShowUsers(true); setShowProducts(false);}} className='add-button'>Users</button>
             <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input-admin"/>
             <div>
+            {showProducts && (
                 <AnimatePresence>
-                {currentProducts.map(product =>(
+                {currentItems.map(product =>(
                     <motion.div key={product.ProductID} className="product-horizontal-card"
                     initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} 
                     exit={{opacity: 0}} transition={{duration: 0.4}}>
@@ -302,6 +398,26 @@ export default function AdminPanel(){
                     </motion.div>                  
                 ))}
                 </AnimatePresence>
+            )}
+            {showUsers && (
+                <AnimatePresence>
+                {currentItems.map(user => (
+                    <motion.div key={user.UserID} className="product-horizontal-card"
+                    initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} 
+                    exit={{opacity: 0}} transition={{duration: 0.4}}>
+                        <div className="product-info">
+                            <h3>{user.Username}</h3>
+                            <p>Email: {user.Email}</p>
+                            <p>Admin: {user.IsAdmin === 1 ? 'Yes' : 'No'}</p>
+                        </div>
+                        <div className="product-actions">
+                            <button onClick={() => startEditUser(user)}>Edit</button>
+                            <button onClick={() => handleUserDelete(user.UserID)}>Delete</button>
+                        </div>
+                    </motion.div>
+                ))}
+                </AnimatePresence>
+            )}
             </div>
             {isEditing && editForm && (
                 <div className="edit-modal">
@@ -362,6 +478,19 @@ export default function AdminPanel(){
                             <button type="submit"  style={{marginBottom: '1rem'}}>Register</button><br />
                             <button type="button" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Cancel</button><br />
                         </form>
+                    </div>
+                </div>
+            )}
+            {isEditingUser && editingUser && (
+                <div className="edit-modal">
+                    <div className="edit-grid">
+                        <h3>Edit User</h3>
+                        <input type="text" name="Username" value={editingUser.Username} onChange={handleUserEditChange} placeholder="Username" style={{marginBottom: '1rem'}}/><br />
+                        <input type="email" name="Email" value={editingUser.Email} onChange={handleUserEditChange} placeholder="Email" style={{marginBottom: '1rem'}}/><br />
+                        <input type="password" name="Password" value={editingUser.Password} onChange={handleUserEditChange} placeholder="New password (leave blank to keep current)" style={{marginBottom: '1rem'}}/><br />
+                        <label><input type="checkbox" name="IsAdmin" checked={editingUser.IsAdmin} onChange={handleUserEditChange} style={{marginBottom: '1rem'}}/>Admin</label><br />
+                        <button onClick={handleUserUpdate} style={{marginBottom: '1rem'}}>Update</button><br />
+                        <button type="button" onClick={() => {setIsEditingUser(false); setEditingUser(null);}} style={{marginBottom: '1rem'}}>Cancel</button>
                     </div>
                 </div>
             )}
