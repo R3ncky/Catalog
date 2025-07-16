@@ -5,8 +5,8 @@ dotenv.config();
 
 const secret = process.env.JWT_SECRET;
 
-export function generateToken(user){
-    return jwt.sign({id: user.id, username: user.username, isAdmin: user.isAdmin}, secret, {expiresIn: '1h'});
+export function generateToken(user, expiresIn = '1h') {
+    return jwt.sign({id: user.id, username: user.username, isAdmin: user.isAdmin}, secret, {expiresIn});
 }
 
 export function authenticateToken(req, res, next){
@@ -33,12 +33,13 @@ export function authorizeAdmin(req, res, next){
 
 export function refreshToken(req, res) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split('')[1];
+    const token = authHeader && authHeader.split(' ')[1];
     if (!token) return res.sendStatus(401);
 
     jwt.verify(token, secret, (err, user) => {
         if (err) return res.sendStatus(403);
 
-        const newToken = generateToken({id: user.id, username: user.username});
+        const newToken = generateToken({id: user.id, username: user.username, isAdmin: user.isAdmin}, '30d');
+        res.json({token: newToken});
     });
 }

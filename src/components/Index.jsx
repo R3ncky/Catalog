@@ -11,19 +11,20 @@ export default function Index(){
     const [categories, setCategories] = useState([]);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if(token){
             setToken(token);
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 setUsername(payload.username || '');
-                setIsAdmin(payload.isAdmin || false);
+                setIsAdmin(!!payload.isAdmin);
             } catch(err){
                 console.warn('Invalid token: ', err.message);
                 setToken(null);
                 setUsername('');
                 setIsAdmin(false);
                 localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 navigate('/login');
             }
         }
@@ -44,9 +45,10 @@ export default function Index(){
     }
     
         const checkAndRefreshToken = () => {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             if(!token || isTokenExpired(token)) {
                 localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 return;
             }
 
@@ -61,10 +63,15 @@ export default function Index(){
                 })
                 .then(res => res.json()).then(data => {
                     if(data.token){
-                        localStorage.setItem('token', data.token);
+                        if(localStorage.getItem('token')) {
+                            localStorage.setItem('token', data.token);
+                        } else {
+                            sessionStorage.setItem('token', data.token);
+                        }
                     }
                 }).catch(() => {
                     localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                 });
             }
         };
@@ -84,6 +91,7 @@ export default function Index(){
 
     const handleLogOut = () =>{
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         setToken(null);
         setUsername('');
         setIsAdmin(false);

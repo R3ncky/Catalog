@@ -7,6 +7,7 @@ import Index from './components/Index';
 import ProductCatalog from './components/ProductCatalog';
 import AboutUs from './components/AboutUs';
 import TermsConditions from './components/TermsConditions';
+import TwoFactorForm from './components/TwoFactorForm';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path='/terms&conditions' element={<TermsConditions />}/>
         <Route path="/catalog" element={<ProductCatalog/>} />
         <Route path="/login" element={<LoginForm />} />
+        <Route path='/verify-2fa' element={<TwoFactorForm />} />
         <Route 
             path="/admin"
             element={

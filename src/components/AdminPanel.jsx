@@ -31,12 +31,11 @@ export default function AdminPanel(){
         imagePath: '',
         brand: '',
         stockqty: '',
-        status: 'Available',
         isFeatured: false, 
         isArchived: false
     });
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
     function isTokenExpired(token) {
         try {
@@ -49,9 +48,10 @@ export default function AdminPanel(){
     }
     
         const checkAndRefreshToken = () => {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             if(!token || isTokenExpired(token)) {
                 localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 return;
             }
 
@@ -66,10 +66,15 @@ export default function AdminPanel(){
                 })
                 .then(res => res.json()).then(data => {
                     if(data.token){
-                        localStorage.setItem('token', data.token);
+                        if(localStorage.getItem('token')) {
+                            localStorage.setItem('token', data.token);
+                        } else {
+                            sessionStorage.setItem('token', data.token);
+                        }
                     }
                 }).catch(() => {
                     localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                 });
             }
         };
@@ -212,7 +217,6 @@ export default function AdminPanel(){
                     imagePath: '',
                     brand: '',
                     stockqty: '',
-                    status: 'Available',
                     isFeatured: false,
                     isArchived: false
                 });
@@ -235,7 +239,6 @@ export default function AdminPanel(){
             imagePath: product.ImagePath ?? '',
             brand: product.Brand ?? '',
             stockqty: product.StockSqty ?? '',
-            status: product.Status ?? 'Available',
             isFeatured: product.IsFeatured ?? false,
             isArchived: product.IsArchived ?? false,
             discountPercentage: product.DiscountPercentage ?? '',
@@ -389,7 +392,7 @@ export default function AdminPanel(){
                         <h3>{product.Name}</h3>
                         <p>{product.Description}</p>  
                         <p>${product.Price}</p>                  
-                        <p>Status: {product.Status}</p>
+                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>
                         </div>
                         <div className="product-actions">
                         <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
@@ -408,7 +411,7 @@ export default function AdminPanel(){
                         <div className="product-info">
                             <h3>{user.Username}</h3>
                             <p>Email: {user.Email}</p>
-                            <p>Admin: {user.IsAdmin === 1 ? 'Yes' : 'No'}</p>
+                            <p>Admin: {user.IsAdmin > 0 ? 'Yes' : 'No'}</p>
                         </div>
                         <div className="product-actions">
                             <button onClick={() => startEditUser(user)}>Edit</button>
@@ -429,7 +432,6 @@ export default function AdminPanel(){
                         <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" style={{marginBottom: '1rem'}}/><br />
                         <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  style={{marginBottom: '1rem'}}/><br />
                         <input name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" style={{marginBottom: '1rem'}}/><br />
-                        <input name="status" value={editForm.status} onChange={handleEditChange} placeholder="Status" style={{marginBottom: '1rem'}}/><br />
                         <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
                         <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
                         <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
@@ -458,7 +460,6 @@ export default function AdminPanel(){
                                 ))}
                             </select><br />
                             <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
-                            <input name="status" placeholder="Status" value={form.status} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
                             <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
                             <button type="submit" style={{marginBottom: '1rem'}}>Post</button><br/>

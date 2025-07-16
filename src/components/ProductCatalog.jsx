@@ -50,7 +50,7 @@ export default function ProductCatalog() {
         window.scrollTo({top: 0, behavior: 'smooth'});
     }, [searchTerm]);
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         const headers = {};
         if(token){
             headers['Authorization'] = `Bearer ${token}`;
@@ -58,13 +58,14 @@ export default function ProductCatalog() {
         try{
             const payload = JSON.parse(atob(token.split('.')[1]));
             setUsername(payload.username || '');   
-            setIsAdmin(payload.isAdmin || false);    
+            setIsAdmin(!!payload.isAdmin);    
         } catch(err){
             console.warn('Invalid token:', err.message);
             setUsername('');
             setToken(null);
             setIsAdmin(false);
             localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
             navigate('/login');
         }
     }
@@ -108,9 +109,10 @@ export default function ProductCatalog() {
     }, [selectedCategoryId, selectedCategories, minPrice, maxPrice, token]);
 
     const checkAndRefreshToken = () => {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             if(!token || isTokenExpired(token)) {
                 localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
                 return;
             }
             const payload = JSON.parse(atob(token.split('.')[1]));
@@ -125,9 +127,12 @@ export default function ProductCatalog() {
                 .then(res => res.json()).then(data => {
                     if(data.token){
                         localStorage.setItem('token', data.token);
+                    } else {
+                        sessionStorage.setItem('token', data.token);
                     }
                 }).catch(() => {
                     localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                 });
             }
         };
@@ -146,12 +151,12 @@ export default function ProductCatalog() {
         }
     };
 
-    const handleListQuantityChange = (productId, value) => {
+    /*const handleListQuantityChange = (productId, value) => {
         const qty = parseInt(value);
         if(!isNaN(qty) && qty >= 1) {
             setSelectedList(prev => prev.map(p => p.ProductID === productId ? {...p, quantity: qty} : p));
         }
-    };
+    };*/
 
     const handleAddList = (product) => {
         const quantityToAdd = quantities[product.ProductID] || 1;
@@ -175,9 +180,9 @@ export default function ProductCatalog() {
         setQuantities(prev => ({...prev, [product.ProductID]: 1})); 
     };
 
-    const handleRemoveList = (productId) => {
+    /*const handleRemoveList = (productId) => {
         setSelectedList(prev => prev.map(p => p.ProductID === productId ? {...p, quantity: p.quantity - 1} : p).filter(p => p.quantity > 0));
-    };
+    };*/
 
     const handleClearList = () => {
         setSelectedList([]);

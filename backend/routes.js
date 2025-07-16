@@ -3,15 +3,20 @@ import { generateToken, authenticateToken, authorizeAdmin, refreshToken } from '
 import sql from 'mssql';
 import  bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 
 const router = express.Router();
-
-/*const users = [
-    {id: 1, username: 'admin', password: 'adminpass'} //Demo only (need to delete)
-];*/
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 router.post('/login', async (req, res) => {
-    const {email, password} = req.body;
+    const {email, password, rememberMe} = req.body;
+    const expiresAt = new Date(Date.now() + 5 * 60000).toISOString(); // 5 minutes expiration for 2FA code
     try{
         const pool = await sql.connect();
         const result = await pool.request()
@@ -19,23 +24,60 @@ router.post('/login', async (req, res) => {
             .query('SELECT UserID, Username, Email, PasswordHash, isAdmin FROM Users WHERE Email = @Email');
         const user = result.recordset[0];
         if (!user){
-            return res.status(401).json({message: 'Invalid credentials'});
-            
+            return res.status(401).json({message: 'Invalid credentials'});     
         }
-
         const match = await bcrypt.compare(password, user.PasswordHash);
         if(!match){
             return res.status(403).json({message: 'Invalid credentials'});
         }
-
-        const token = generateToken({id: user.UserID, username: user.Username, email: user.Email, isAdmin: user.isAdmin});
-        res.json({token, username: user.Username});
+        const code = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit code
+        await pool.request()
+            .input('UserID', sql.Int, user.UserID)
+            .input('Code', sql.NVarChar(6), code.toString())
+            .input('ExpiresAt', sql.DateTime, expiresAt) // Code valid for 5 minutes
+            .query('INSERT INTO TwoFactorCodes (UserID, Code, ExpiresAt) VALUES (@UserID, @Code, @ExpiresAt)');
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your 2FA Code',
+            text: `Your verification code is ${code}. It is valid for 5 minutes.`
+        });
+        res.json({twoFactorRequired: true, userId: user.UserID, rememberMe});
     } catch(err){
         console.error('Login error', err);
         res.status(500).json({message: 'Login failed'});
     }
 });
 
+//verifying the 2FA code
+router.post('/verify-2fa', async (req, res) => {
+    const {userId, code, rememberMe} = req.body;
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .input('Code', sql.NVarChar, code.toString().trim())
+            .query(`SELECT * FROM TwoFactorCodes WHERE UserID = @UserID AND Code = @Code AND ExpiresAt > GETUTCDATE()`);
+        console.log('2FA verification result:', result.recordset);
+        console.log('User ID:', userId, 'Code:', code);
+        if(result.recordset.length === 0){
+            return res.status(400).json({message: 'Invalid or expired code'});
+        }
+        await pool.request()
+            .input('UserID', sql.Int, userId)
+            .query('DELETE FROM TwoFactorCodes WHERE UserID = @UserID'); // Remove the used code
+        const userRes = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .query('SELECT UserID, Username, Email, isAdmin FROM Users WHERE UserID = @UserID');
+        const user = userRes.recordset[0];
+        const expiresIn = rememberMe ? '30d' : '1h'; // Set token expiration based on rememberMe
+        const token = generateToken({id: user.UserID, username: user.Username, email: user.Email, isAdmin: user.isAdmin}, expiresIn);
+        res.json({token, username: user.Username});
+    } catch(err){
+        console.error('2FA verification error:', err);
+        res.status(500).json({message: '2FA verification failed'});
+    }
+});
 //registering
 router.post('/register', async (req, res) => {
     const {username, email, password, isAdmin} = req.body;
@@ -152,7 +194,7 @@ router.get('/products', async (req, res) =>{
 
 //inserting a new product
 router.post('/products', authenticateToken, authorizeAdmin, async(req, res) =>{
-    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty } = req.body;
+    const {name, description, price, imagePath, brand, stockqty, isFeatured, isArchived, discountPercentage, discountMinQty } = req.body;
 
     try{
         const pool = await sql.connect();
@@ -162,15 +204,14 @@ router.post('/products', authenticateToken, authorizeAdmin, async(req, res) =>{
                             .input('ImagePath', sql.NVarChar, imagePath)
                             .input('Brand', sql.NVarChar, brand)
                             .input('StockQty', sql.Int, stockqty)
-                            .input('Status', sql.NVarChar, status)
                             .input('IsFeatured', sql.Bit, isFeatured)
                             .input('IsArchived', sql.Bit, isArchived)
                             .input('DiscountPercentage', sql.Int, discountPercentage)
                             .input('DiscountMinQty', sql.Int, discountMinQty)
                             .query(`
-                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, Status, IsFeatured, IsArchived, DiscountPercentage, DiscountMinQty)
+                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, IsFeatured, IsArchived, DiscountPercentage, DiscountMinQty)
                 OUTPUT INSERTED.ProductID
-                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @Status, @IsFeatured, @IsArchived, @DiscountPercentage, @DiscountMinQty)`);
+                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @IsFeatured, @IsArchived, @DiscountPercentage, @DiscountMinQty)`);
         const newProductID = result.recordset[0].ProductID;
         res.status(201).json({message: 'Product added successfully', productId: newProductID});
     } catch(err) {
@@ -214,7 +255,7 @@ router.delete('/products/:id', authenticateToken, authorizeAdmin, async(req, res
 //updating a product by ID
 router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) => {
     const productId = req.params.id;
-    const {name, description, price, imagePath, brand, stockqty, status, isFeatured, isArchived, discountPercentage, discountMinQty, discountStart, discountEnd} = req.body;
+    const {name, description, price, imagePath, brand, stockqty, isFeatured, isArchived, discountPercentage, discountMinQty, discountStart, discountEnd} = req.body;
 
     try{
         const pool = await sql.connect();
@@ -226,7 +267,6 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                 .input('ImagePath', sql.NVarChar, imagePath)
                 .input('Brand', sql.NVarChar, brand)
                 .input('StockQty', sql.Int, stockqty)
-                .input('Status', sql.NVarChar, status)
                 .input('IsFeatured', sql.Bit, isFeatured)
                 .input('IsArchived', sql.Bit, isArchived)
                 .input('DiscountPercentage', sql.Int, discountPercentage)
@@ -240,7 +280,6 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                             ImagePath = @ImagePath,
                             Brand = @Brand,
                             StockQty = @StockQty,
-                            Status = @Status,
                             IsFeatured = @IsFeatured,
                             IsArchived = @IsArchived,
                             DiscountPercentage = @DiscountPercentage,

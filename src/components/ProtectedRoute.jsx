@@ -5,7 +5,7 @@ export default function ProtectedRoute({children}) {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         setIsAuthenticated(!!token);
     }, []);
 
