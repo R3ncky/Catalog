@@ -2,6 +2,7 @@ import { Link, useNavigate} from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import '../styles/Index.css';
 import HomeButton from './HomeButton';
+import FeaturedCarousel from './FeaturedCarousel';
 
 export default function Index(){
     const navigate = useNavigate();
@@ -149,6 +150,7 @@ export default function Index(){
                 </p>
                 <img src='../assets/lotus-big.jpg' alt="Lotus" />
             </div>
+            <FeaturedCarousel />
             <div className='category-box'>
               <h2>Browse by Category</h2>
               <div className='category-grid'>

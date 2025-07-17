@@ -116,7 +116,7 @@
 .product-image{
     width: 100%;
     height: auto;
-    max-width: 200px;
+    max-width: 250px;
     object-fit: cover;
     border-radius: 8px;
     margin-bottom: 10px;

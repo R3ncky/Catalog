@@ -70,6 +70,9 @@ router.post('/verify-2fa', async (req, res) => {
             .input('UserID', sql.Int, userId)
             .query('SELECT UserID, Username, Email, isAdmin FROM Users WHERE UserID = @UserID');
         const user = userRes.recordset[0];
+        if(!user) {
+            return res.status(404).json({message: 'User not found'});
+        }
         const expiresIn = rememberMe ? '30d' : '1h'; // Set token expiration based on rememberMe
         const token = generateToken({id: user.UserID, username: user.Username, email: user.Email, isAdmin: user.isAdmin}, expiresIn);
         res.json({token, username: user.Username});
@@ -111,6 +114,18 @@ router.post('/api/refresh-token', refreshToken);
 
 router.get('/admin', authenticateToken, authorizeAdmin, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
+});
+
+//getting the featured products
+router.get('/featured-products', async (req, res) => {
+    try{
+        const pool = await sql.connect();
+        const result = await pool.request().query('SELECT * FROM Product WHERE IsFeatured = 1');
+        res.json(result.recordset);
+    } catch(err){
+        console.error('Error fetching featured products:', err);
+        res.status(500).json({message: 'Failed to fetch featured products'});
+    }
 });
 
 //getting all the active categories

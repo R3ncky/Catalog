@@ -238,7 +238,7 @@ export default function AdminPanel(){
             price: product.Price ?? '',
             imagePath: product.ImagePath ?? '',
             brand: product.Brand ?? '',
-            stockqty: product.StockSqty ?? '',
+            stockqty: product.StockQty ?? '',
             isFeatured: product.IsFeatured ?? false,
             isArchived: product.IsArchived ?? false,
             discountPercentage: product.DiscountPercentage ?? '',
