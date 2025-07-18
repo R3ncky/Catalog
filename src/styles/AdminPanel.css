@@ -64,11 +64,11 @@
     font-weight: bold;
 }
 .product-actions button:first-child{
-    background-color: #d85647;
+    background-color: #3498db;
     color: white;
 }
-.product-actions button:last-child{
-    background-color: #3498db;
+.product-actions button:last-child{   
+    background-color: #d85647;
     color: white;
 }
 .search-input{
@@ -97,4 +97,12 @@
     background-color: #3498db;
     color: white;
     margin-right: 1rem; 
+}
+.admin-price-input::-webkit-inner-spin-button,
+.admin-price-input::-webkit-outer-spin-button{
+    appearance: none;
+    margin: 0;
+}
+.admin-price-input{
+    appearance: textfield;;
 }

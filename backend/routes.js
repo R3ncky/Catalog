@@ -356,7 +356,7 @@ router.post('/update-stock', authenticateToken, async(req, res) => {
 router.get('/users', authenticateToken, authorizeAdmin, async(req, res) => {
     try{
         const pool = await sql.connect();
-        const result = await pool.request().query('SELECT UserID, Username, Email, isAdmin FROM Users');
+        const result = await pool.request().query('SELECT UserID, Username, Email, IsAdmin FROM Users');
         res.json(result.recordset);
     } catch(err) {
         console.error('Error fetching users:', err);
@@ -366,7 +366,7 @@ router.get('/users', authenticateToken, authorizeAdmin, async(req, res) => {
 );
 //updating a user by ID
 router.put('/users/:id', authenticateToken, authorizeAdmin, async(req, res) => {
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
     const {username, email, isAdmin, password} = req.body;
 
     

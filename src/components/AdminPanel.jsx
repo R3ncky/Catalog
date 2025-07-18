@@ -304,13 +304,14 @@ export default function AdminPanel(){
         const userToSend = {
             username: editingUser.Username,
             email: editingUser.Email,
-            isAdmin: editingUser.IsAdmin
+            isAdmin: editingUser.IsAdmin 
         };
 
         if(editingUser.Password && editingUser.Password.trim() !== ''){
             userToSend.password = editingUser.Password;
         }
         try {
+            console.log('user update: ', userToSend);
             const res = await fetch(`http://localhost:5000/api/users/${editingUser.UserID}`, {
                 method: 'PUT',
                 headers: {
@@ -395,8 +396,8 @@ export default function AdminPanel(){
                         <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>
                         </div>
                         <div className="product-actions">
-                        <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
                         <button onClick={() => startEdit(product)}>Edit</button>
+                        <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
                         </div>
                     </motion.div>                  
                 ))}
@@ -411,11 +412,11 @@ export default function AdminPanel(){
                         <div className="product-info">
                             <h3>{user.Username}</h3>
                             <p>Email: {user.Email}</p>
-                            <p>Admin: {user.IsAdmin > 0 ? 'Yes' : 'No'}</p>
+                            <p>Admin: {user.IsAdmin ? 'Yes' : 'No'}</p>
                         </div>
                         <div className="product-actions">
                             <button onClick={() => startEditUser(user)}>Edit</button>
-                            <button onClick={() => handleUserDelete(user.UserID)}>Delete</button>
+                            <button onClick={() => handleUserDelete(user.userID)}>Delete</button>
                         </div>
                     </motion.div>
                 ))}
@@ -428,18 +429,20 @@ export default function AdminPanel(){
                         <h3>Edit Product</h3>
                         <input name="name" value={editForm.name} onChange={handleEditChange} placeholder="Name" style={{marginBottom: '1rem'}}/><br />
                         <textarea name="description" value={editForm.description} onChange={handleEditChange} placeholder="Description" style={{marginBottom: '1rem'}}/><br />
-                        <input name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" style={{marginBottom: '1rem'}}/><br />
+                        <input className="admin-price-input" name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" style={{marginBottom: '1rem'}}/><br />
                         <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" style={{marginBottom: '1rem'}}/><br />
                         <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  style={{marginBottom: '1rem'}}/><br />
-                        <input name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" style={{marginBottom: '1rem'}}/><br />
+                        <input className="admin-price-input" name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" style={{marginBottom: '1rem'}}/><br />
                         <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
                         <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
-                        <input type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
-                        <input type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
+                        <input className="admin-price-input" type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
+                        <input className="admin-price-input" type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
                         <input type="datetime-local" name="discountStart" placeholder="Discount Start" value={editForm.discountStart} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
                         <input type="datetime-local" name="discountEnd" placeholder="Discount End" value={editForm.discountEnd} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
-                        <button onClick={handleEditSubmit} style={{marginBottom: '1rem'}}>Post</button><br />
-                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}} style={{marginBottom: '1rem'}}>Cancel</button>
+                    <div className="product-actions">
+                        <button onClick={handleEditSubmit}  style={{marginBottom: '1rem'}}>Post</button><br />
+                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}}  style={{marginBottom: '1rem'}}>Cancel</button>
+                    </div>
                     </div>
                 </div>
             )}
@@ -450,7 +453,7 @@ export default function AdminPanel(){
                          <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
                             <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
                             <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
-                            <input name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
+                            <input className="admin-price-input" name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
                             <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required style={{marginBottom: '1rem'}}>
@@ -459,11 +462,13 @@ export default function AdminPanel(){
                                 <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
                                 ))}
                             </select><br />
-                            <input name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
+                            <input className="admin-price-input" name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
                             <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
-                            <button type="submit" style={{marginBottom: '1rem'}}>Post</button><br/>
-                            <button type="button" onClick={() => setIsAdding(false)} style={{marginBottom: '1rem'}}>Cancel</button>
+                        <div className="product-actions">
+                            <button type="submit" className="admin-buttons" style={{marginBottom: '1rem'}}>Post</button><br/>
+                            <button type="button" onClick={() => setIsAdding(false)} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button>
+                        </div>
                          </form>
                     </div>
                 </div>
@@ -476,8 +481,10 @@ export default function AdminPanel(){
                             <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
                             <input type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
                             <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
-                            <button type="submit"  style={{marginBottom: '1rem'}}>Register</button><br />
-                            <button type="button" onClick={() => setIsRegistering(false)} style={{marginBottom: '1rem'}}>Cancel</button><br />
+                        <div className="product-actions">
+                            <button type="submit" className="admin-buttons" style={{marginBottom: '1rem'}}>Register</button><br />
+                            <button type="button" onClick={() => setIsRegistering(false)} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button><br />
+                        </div>
                         </form>
                     </div>
                 </div>
@@ -490,8 +497,10 @@ export default function AdminPanel(){
                         <input type="email" name="Email" value={editingUser.Email} onChange={handleUserEditChange} placeholder="Email" style={{marginBottom: '1rem'}}/><br />
                         <input type="password" name="Password" value={editingUser.Password} onChange={handleUserEditChange} placeholder="New password (leave blank to keep current)" style={{marginBottom: '1rem'}}/><br />
                         <label><input type="checkbox" name="IsAdmin" checked={editingUser.IsAdmin} onChange={handleUserEditChange} style={{marginBottom: '1rem'}}/>Admin</label><br />
-                        <button onClick={handleUserUpdate} style={{marginBottom: '1rem'}}>Update</button><br />
-                        <button type="button" onClick={() => {setIsEditingUser(false); setEditingUser(null);}} style={{marginBottom: '1rem'}}>Cancel</button>
+                    <div className="product-actions">    
+                        <button onClick={handleUserUpdate} className="admin-buttons" style={{marginBottom: '1rem'}}>Update</button><br />
+                        <button type="button" onClick={() => {setIsEditingUser(false); setEditingUser(null);}} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button>
+                    </div>
                     </div>
                 </div>
             )}

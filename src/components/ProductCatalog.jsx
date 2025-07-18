@@ -395,11 +395,11 @@ export default function ProductCatalog() {
                     <h3>Filter by Price</h3>
                     <ul className="price-filter">
                     <li>
-                    <input type="number" placeholder="Min Price"
+                    <input type="number" placeholder="Min Price" className="price-input"
                     value={minPrice} onChange={e => setMinPrice(e.target.value)} />
                     </li>
                     <li>
-                    <input type="number" placeholder="Max Price"
+                    <input type="number" placeholder="Max Price" className="price-input"
                     value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
                     </li>
                     </ul>
