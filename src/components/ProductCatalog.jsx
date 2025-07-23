@@ -482,7 +482,7 @@ export default function ProductCatalog() {
                             <>
                             <p><strong>Price: ${product.Price}</strong></p>
                             <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
-                            {product.DiscountPercentage && product.DiscountMinQty && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
+                            {product.DiscountPercentage > 0 && product.DiscountMinQty > 0 && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
                             <p><strong>Discount: </strong>Buy {product.DiscountMinQty}+ and get {product.DiscountPercentage}% Off! <br /> Valid until {new Date(product.DiscountEnd).toLocaleDateString()}</p>
                             )}
                             </>

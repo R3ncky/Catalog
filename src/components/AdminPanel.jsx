@@ -3,11 +3,12 @@ import HomeButton from "./HomeButton";
 import { useNavigate } from "react-router-dom";
 import '../styles/AdminPanel.css';
 import {motion, AnimatePresence} from 'framer-motion';
+import { parse } from "dotenv";
 
 export default function AdminPanel(){
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategories, setSelectedCategories] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [isRegistering, setIsRegistering] = useState(false);
@@ -198,6 +199,7 @@ export default function AdminPanel(){
                 const data = await res.json();
                 const  newProductId = data.productId;
                 console.log('Token:', token);
+                for (const categoryId of selectedCategories) {
                 await fetch('http://localhost:5000/api/product-category', {
                     method: 'POST',
                     headers: {
@@ -205,10 +207,11 @@ export default function AdminPanel(){
                         Authorization: `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        categoryId: selectedCategory,
+                        categoryId,
                         productId: newProductId
                     })
                 });
+            }
 
                 setForm({
                     name: '',
@@ -220,7 +223,7 @@ export default function AdminPanel(){
                     isFeatured: false,
                     isArchived: false
                 });
-                setSelectedCategory('');
+                setSelectedCategories([]);
                 //refresh products
                 window.location.reload();
             } else{
@@ -456,12 +459,22 @@ export default function AdminPanel(){
                             <input className="admin-price-input" name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
                             <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
-                            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} required style={{marginBottom: '1rem'}}>
-                            <option value="">Select a Category</option>
+                            <div style={{margin: '1rem'}}>
+                                <p>Select Categories:</p>
                                 {categories.map(cat => (
-                                <option key={cat.CategoryID} value={cat.CategoryID}>{cat.Name}</option>
+                                    <label key={cat.CategoryID} style={{marginRight: '1rem', display: 'block'}}>
+                                        <input type="checkbox" value={cat.CategoryID} checked={selectedCategories.includes(cat.CategoryID)} onChange={(e) => {
+                                            const id = parseInt(e.target.value);
+                                            if (e.target.checked) {
+                                                setSelectedCategories(prev => [...prev, id]);
+                                            } else {
+                                                setSelectedCategories(prev => prev.filter(c => c !== id));
+                                            }
+                                        }} />
+                                        {cat.Name}
+                                    </label>
                                 ))}
-                            </select><br />
+                            </div><br />
                             <input className="admin-price-input" name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
                             <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
                             <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
