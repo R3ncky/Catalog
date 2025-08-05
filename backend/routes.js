@@ -4,6 +4,7 @@ import sql from 'mssql';
 import  bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import ExcelJS from 'exceljs';
 
 const router = express.Router();
 const transporter = nodemailer.createTransport({
@@ -42,6 +43,7 @@ router.post('/login', async (req, res) => {
             subject: 'Your 2FA Code',
             text: `Your verification code is ${code}. It is valid for 5 minutes.`
         });
+        console.log(code);
         res.json({twoFactorRequired: true, userId: user.UserID, rememberMe});
     } catch(err){
         console.error('Login error', err);
@@ -58,8 +60,6 @@ router.post('/verify-2fa', async (req, res) => {
             .input('UserID', sql.Int, userId)
             .input('Code', sql.NVarChar, code.toString().trim())
             .query(`SELECT * FROM TwoFactorCodes WHERE UserID = @UserID AND Code = @Code AND ExpiresAt > GETUTCDATE()`);
-        console.log('2FA verification result:', result.recordset);
-        console.log('User ID:', userId, 'Code:', code);
         if(result.recordset.length === 0){
             return res.status(400).json({message: 'Invalid or expired code'});
         }
@@ -114,6 +114,147 @@ router.post('/api/refresh-token', refreshToken);
 
 router.get('/admin', authenticateToken, authorizeAdmin, (req, res) => {
     res.json({message: `Welcome ${req.user.username}, you are authenticated.`});
+});
+
+//get all the ClientCompanies
+router.get('/client-companies', authenticateToken, async(req, res) => {
+    try {
+        const pool = await sql.connect();
+        const result = await pool.request().query('SELECT ClientCompanyID, Name, Email FROM ClientCompany');
+        res.json(result.recordset);
+    } catch(err) {
+        console.error("Error fetching client companies: ", err);
+        res.status(500).json({ message: 'Failed to fetch client companies'});
+    }
+});
+
+//sending the exported info / text
+router.post('/send-export-email', authenticateToken, async(req, res) => {
+    const {clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
+    
+    try {
+        const pool = await sql.connect();
+        const result = await pool.request().input('ClientCompanyID', sql.Int, clientCompanyId)
+            .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
+        
+        const client = result.recordset[0];
+        if(!client){
+            return res.status(404).json({message: 'Client not found'});
+        }
+        let htmlContent = `
+            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
+                <h2 style="color: #2d89ef;">Hello ${client.Name},</h2>
+                <p>Here is your exported product list:</p>
+                <ul style="padding-left: 0; list-style: none;">`;
+        
+        productList.forEach(product => {
+            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+            const total = (pricePerUnit * product.quantity).toFixed(2);
+
+            htmlContent += `
+                <li style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
+                    <strong>${product.Name}</strong><br/>
+                    Quantity: ${product.quantity}<br/>
+                    Price per unit: $${pricePerUnit.toFixed(2)}<br/>
+                    ${hasDiscount ? `<span style="color: green;">Discount: ${product.DiscountPercentage}%</span><br/>` : ''}
+                    Total: <strong>$${total}</strong>
+                </li>`;
+        });
+
+        htmlContent += `
+                </ul>
+                <p><strong>Total (no tax):</strong> $${totalPrice.toFixed(2)}</p>
+                <p><strong>Total (with tax 20%):</strong> $${totalWithTax.toFixed(2)}</p>
+                <p style="margin-top: 30px;">Thank you for your business,<br/><strong>Your Company Team</strong></p>
+            </div>`;
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: client.Email,
+            subject: 'Your order from Lotus',
+            html: htmlContent
+        });
+
+        res.status(200).json({message: 'Export email sent to client'});
+    } catch(err) {
+        console.error('Error sending export email: ', err);
+        res.status(500).json({message: 'Failed to send export email'});
+    }
+});
+
+router.post('/send-export-excel', authenticateToken, async (req, res) => {
+    const {clientCompanyId, productList, totalPrice, totalWithTax} = req.body;
+
+    try {
+        const pool = await sql.connect();
+        const result = await pool.request().input('ClientCompanyID', sql.Int, clientCompanyId)
+            .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
+        
+        const client = result.recordset[0];
+        if(!client) {
+            return res.status(404).json({message: 'Client not found'});
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Products order from Lotus');
+
+        worksheet.columns = [
+            {header: 'Product Name', key: 'name', width: 30},
+            { header: 'Quantity', key: 'quantity', width: 10 },
+            { header: 'Price per Unit', key: 'pricePerUnit', width: 15 },
+            { header: 'Total Price', key: 'totalPrice', width: 15 },
+            { header: 'Discount', key: 'discount', width: 15 }
+        ];
+
+        productList.forEach(product => {
+            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+            const totalPrice = pricePerUnit * product.quantity;
+
+            worksheet.addRow({
+                name: product.Name,
+                quantity: product.quantity,
+                pricePerUnit: pricePerUnit.toFixed(2),
+                totalPrice: totalPrice.toFixed(2),
+                discount: hasDiscount ? `${product.DiscountPercentage}% Off` : `No Discount`
+            });
+        });
+
+        worksheet.addRow({});
+        worksheet.addRow({name: 'Total (no tax)', totalPrice: totalPrice.toFixed(2)});
+        worksheet.addRow({name: 'Total (with tax 20%)', totalPrice: totalWithTax.toFixed(2)});
+
+        const buffer = await workbook.xlsx.writeBuffer();
+
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: client.Email, 
+            subject: 'Your order from Lotus (Excel)',
+            html: `
+            <div style="font-family: Arial, sans-serif; color: #333;">
+                    <h2>Hello ${client.Name},</h2>
+                    <p>Your exported product list is attached as an Excel file.</p>
+                    <p>Summary:</p>
+                    <ul>
+                        <li><strong>Total Products:</strong> ${productList.length}</li>
+                        <li><strong>Total (no tax):</strong> $${totalPrice.toFixed(2)}</li>
+                        <li><strong>Total (with tax 20%):</strong> $${totalWithTax.toFixed(2)}</li>
+                    </ul>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'ProductExport.xlsx',
+                    content: buffer,
+                    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }
+            ]
+        });
+        res.status(200).json({message: 'Excel export and send was successful'});
+    } catch(err) {
+        console.error('Error sending Excel export: ', err);
+        res.status(500).json({message: 'Failed to send Excel export'});
+    }
 });
 
 //getting the featured products

@@ -285,3 +285,10 @@
     cursor: pointer;
     margin-bottom: 1rem;
 }
+.client-dropdown {
+    margin: 1rem 0;
+}
+.client-dropdown select {
+    padding: 0.5rem;
+    width: 100%;
+}

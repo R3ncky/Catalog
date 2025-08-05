@@ -4,8 +4,16 @@ html, body{
     margin: 0;
     padding: 0;
 }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #222;
+    line-height: 1.6;
+}
 header{
     background-color: rgb(217, 255, 224);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 .page-container{
     display: flex;
@@ -23,6 +31,7 @@ h1, h2{
     text-align: center;
     margin: auto;
 }
+/*
 .index-motivation{
     display: flex;
     align-items: center;
@@ -41,8 +50,74 @@ h1, h2{
     height: auto;
     margin-left: 50px;
     margin-right: 150px;
-    border-radius: 3px;
+    border-radius: 6px;
 }
+    */
+.hero-banner {
+    background: url('../assets/lotus-big.jpg') center/cover no-repeat;
+    height: 500px; /* or use min-height if you want to support responsive height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    position: relative;
+    border-radius: 6px;
+    margin: 40px auto 20px;
+    max-width: 95%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.45); /* Darker for better contrast */
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
+    padding: 0 20px;
+}
+
+.hero-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #ffeedd;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: #f0f0f0;
+    margin-bottom: 1.5rem;
+}
+
+
+.hero-button {
+    background-color: rgb(243, 103, 47);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.hero-button:hover {
+    background-color: rgb(250, 140, 93);
+    transform: translateY(-2px);
+}
+
+
 .navbar-right-index{
     display: flex;
     align-items: center;
@@ -152,13 +227,18 @@ h1, h2{
     cursor: pointer;
     font-size: 17px;
     font-style: bold;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
 }
 .category-buttons:hover{
     background-color: rgb(250, 140, 93);
+    transform: translateY(-2px);
+}
+button:active {
+    transform: scale(0.98);
 }
 .index-footer{
     background-color: rgb(217, 255, 224);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
     border-top: 3px solid rgb(255, 160, 122);
     padding: 30px 40px;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
@@ -194,4 +274,42 @@ h1, h2{
     margin-top: 20px;
     font-size: 13px;
     color: #777;
+}
+@media (max-width: 768px) {
+    .hero-banner {
+        height: auto;
+        padding: 60px 20px;
+    }
+
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+
+    .hero-content p {
+        font-size: 1rem;
+    }
+
+    .hero-button {
+        width: 100%;
+        max-width: 300px;
+    }
+    .navbar-index {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .navbar-left-index, .navbar-right-index {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .category-buttons {
+        width: 90%;
+    }
 }

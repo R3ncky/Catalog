@@ -139,17 +139,19 @@ export default function Index(){
             </header>
             <main className='main-content'>
             <div className='index-wrapper'>
-            <h1>Welcome to the Catalog App</h1>
-            <div className='index-motivation'>
+            
+            <section className="hero-banner">
+                <div className="hero-content">
+                <h1>Elegance in Every Detail</h1>
                 <p>
-                    Discover quality and care in every product — from refreshing soaps and smooth
-                    shaving creams to reliable knives and handy sponges. 
-                    Our curated selection is designed to bring a little more ease, confidence, and comfort to your daily routine. 
-                    Because taking care of yourself and your space isn’t just a task — it’s a moment of pride and self-respect.
-                    Shop smart. Feel fresh. Live well.
+                Discover quality and care in every product — from refreshing soaps and smooth
+                shaving creams to reliable knives and handy sponges.
                 </p>
-                <img src='../assets/lotus-big.jpg' alt="Lotus" />
-            </div>
+                <button className="hero-button" onClick={() => navigate('/catalog')}>
+                Browse Catalog
+                </button>
+                </div>
+                </section>
             <FeaturedCarousel />
             <div className='category-box'>
               <h2>Browse by Category</h2>

@@ -17,5 +17,5 @@ async function removeExpiredDiscounts() {
         console.error(`[${new Date().toISOString()}] Error removing expired discounts:`, error);
     }
 }
-setInterval(removeExpiredDiscounts, 30 * 60 * 1000); // Run every 30 minutes
+setInterval(removeExpiredDiscounts, 24 * 60 * 60 * 1000); // Run every 24 hours
 module.exports = removeExpiredDiscounts;

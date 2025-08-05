@@ -16,6 +16,8 @@ export default function ProductCatalog() {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [minPrice, setMinPrice] = useState('');
     const [maxPrice, setMaxPrice] = useState('');
+    const [clients, setClients] = useState([]);
+    const [selectedClient, setSelectedClient] = useState(null);
     const [userModifiedCategories, setUserModifiedCategories] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedList, setSelectedList] = useState([]);
@@ -75,7 +77,10 @@ export default function ProductCatalog() {
             .catch(err => console.error('Error fetching categories:', err));
         window.scrollTo({top: 0, behavior: 'smooth'});
 
-        
+        fetch('http://localhost:5000/api/client-companies', {headers})
+            .then(res => res.json())
+            .then(data => setClients(data))
+            .catch(err => console.error('Error fetching clients: ', err));
 
         const params = new URLSearchParams();
         
@@ -151,13 +156,6 @@ export default function ProductCatalog() {
         }
     };
 
-    /*const handleListQuantityChange = (productId, value) => {
-        const qty = parseInt(value);
-        if(!isNaN(qty) && qty >= 1) {
-            setSelectedList(prev => prev.map(p => p.ProductID === productId ? {...p, quantity: qty} : p));
-        }
-    };*/
-
     const handleAddList = (product) => {
         const quantityToAdd = quantities[product.ProductID] || 1;
         const availablestock = product.StockQty || 0;
@@ -198,6 +196,7 @@ export default function ProductCatalog() {
             const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
             const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
             const total = (pricePerUnit * product.quantity).toFixed(2);
+            content += `Client: ${clients.find(c => c.ClientCompanyID === parseInt(selectedClient))?.Name || 'Not selected'}\n\n`;
             content += `${product.Name}\n`;
             content += `Quantity: ${product.quantity}\n`;
             content += `Price per unit: $${pricePerUnit.toFixed(2)}\n`;
@@ -213,6 +212,24 @@ export default function ProductCatalog() {
         link.href = URL.createObjectURL(blob);
         link.download = 'selected_products.txt';
         link.click();
+
+        fetch('http://localhost:5000/api/send-export-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                clientCompanyId: parseInt(selectedClient),
+                productList: selectedList,
+                totalPrice: getTotalPrice(),
+                totalWithTax: parseFloat(getTotalWithTax())
+            })
+        }).then(res => res.json()).then(data => {
+            console.log('Email with TXT content sent: ', data);
+        }).catch(err => {
+            console.error('Error sending TXT email: ', err);
+        });
 
         fetch('http://localhost:5000/api/update-stock', {
             method: 'POST',
@@ -231,7 +248,7 @@ export default function ProductCatalog() {
         }).then(data => {
             console.log('Stock updated successfully:', data);
             setTimeout(() => {
-                window.location.reload();
+                //window.location.reload();
             }, 500);
         }).catch(err => {
             console.error('Error updating stock:', err);
@@ -265,6 +282,7 @@ export default function ProductCatalog() {
                 discount: hasDiscount ? `${product.DiscountPercentage}% Off` : 'No Discount'
             });
         });
+        worksheet.addRow({name: `Client: ${clients.find(c => c.ClientCompanyID === parseInt(selectedClient))?.Name || 'Not selected'}` });
         worksheet.addRow({});
         worksheet.addRow({ name: 'Total Price (no tax)', totalPrice: getTotalPrice().toFixed(2) });
         worksheet.addRow({ name: 'Total Price (with tax 20%)', totalPrice: getTotalWithTax() });
@@ -272,6 +290,24 @@ export default function ProductCatalog() {
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         saveAs(blob, 'selected_products.xlsx');
+
+        fetch('http://localhost:5000/api/send-export-excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                clientCompanyId: parseInt(selectedClient),
+                productList: selectedList,
+                totalPrice: getTotalPrice(),
+                totalWithTax: parseFloat(getTotalWithTax())
+            })
+        }).then(res => res.json()).then(data => {
+            console.log('Email with Excel attachment sent: ', data);
+        }).catch(err => {
+            console.error('Failed to send Excel email');
+        })
 
         fetch('http://localhost:5000/api/update-stock', {
             method: 'POST',
@@ -290,7 +326,7 @@ export default function ProductCatalog() {
         }).then(data => {
             console.log('Stock updated successfully:', data);
             setTimeout(() => {
-                window.location.reload();
+                //window.location.reload();
             }, 500);
         }).catch(err => {
             console.error('Error updating stock:', err);
@@ -372,6 +408,7 @@ export default function ProductCatalog() {
             </div>
             </header>
             <main className="main-content">
+                
             <h2 className="header2">Product Catalog</h2>
             <div className="product-page">
             
@@ -404,6 +441,18 @@ export default function ProductCatalog() {
                     </li>
                     </ul>
                     </>
+                )}
+                {token && (
+                    <div className="client-dropdown">
+                        <label htmlFor="clientSelect">Choose Client:</label>
+                        <select id="clientSelect" value={selectedClient || ''} onChange={e => setSelectedClient(e.target.value)}>
+                            {clients.map(client => (
+                                <option key={client.ClientCompanyID} value={client.ClientCompanyID}>
+                                    {client.Name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 )}
             </div>
             <div className="display-flex2">
