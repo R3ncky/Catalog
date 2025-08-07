@@ -168,6 +168,38 @@ router.post('/send-export-email', authenticateToken, async(req, res) => {
                 <p><strong>Total (with tax 20%):</strong> $${totalWithTax.toFixed(2)}</p>
                 <p style="margin-top: 30px;">Thank you for your business,<br/><strong>Your Company Team</strong></p>
             </div>`;
+        const userId = req.user?.id;
+
+        if (!userId) {
+        console.error('No userId found in token');
+        return res.status(401).json({ message: 'User not authenticated' });
+        }
+
+
+        const exportedResult = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .input('ClientCompanyID', sql.Int, clientCompanyId)
+            .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
+            .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
+            .query(`INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax) 
+                OUTPUT INSERTED.ExportID
+                VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax)`);
+        const exportId = exportedResult.recordset[0].ExportID;
+
+        for(const product of productList) 
+            {
+                const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+                const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+
+                await pool.request()
+                    .input('ExportID', sql.Int, exportId)
+                    .input('ProductID', sql.Int, product.ProductID)
+                    .input('Quantity', sql.Int, product.quantity)
+                    .input('PricePerUnit', sql.Decimal(10, 2), pricePerUnit)
+                    .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
+                    .query(`INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) 
+                        VALUES (@ExportID, @ProductID, @Quantity, @PricePerUnit, @DiscountPercentage)`);
+            }
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: client.Email,
@@ -226,6 +258,38 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
 
         const buffer = await workbook.xlsx.writeBuffer();
 
+        const userId = req.user?.id;
+
+        if (!userId) {
+        console.error('No userId found in token');
+        return res.status(401).json({ message: 'User not authenticated' });
+        }
+
+
+        const exportedResult = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .input('ClientCompanyID', sql.Int, clientCompanyId)
+            .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
+            .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
+            .query(`INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax) 
+                OUTPUT INSERTED.ExportID
+                VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax)`);
+        const exportId = exportedResult.recordset[0].ExportID;
+
+        for(const product of productList) 
+            {
+                const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+                const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+
+                await pool.request()
+                    .input('ExportID', sql.Int, exportId)
+                    .input('ProductID', sql.Int, product.ProductID)
+                    .input('Quantity', sql.Int, product.quantity)
+                    .input('PricePerUnit', sql.Decimal(10, 2), pricePerUnit)
+                    .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
+                    .query(`INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) 
+                        VALUES (@ExportID, @ProductID, @Quantity, @PricePerUnit, @DiscountPercentage)`);
+            }
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: client.Email, 
@@ -256,6 +320,70 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
         res.status(500).json({message: 'Failed to send Excel export'});
     }
 });
+
+//exporting an User sales in Excel
+router.get('/export/user/:userId', authenticateToken, authorizeAdmin, async (req, res) => {
+    const userId = parseInt(req.params.userId);
+    try {
+        const pool = await sql.connect();
+
+        const exportHistory = await pool.request()
+            .input('UserID', sql.Int, userId)
+            .query(`
+                SELECT eh.ExportID, eh.TotalPrice, eh.TotalWithTax, eh.ExportDate, cc.Name AS ClientName
+                FROM ExportHistory eh
+                JOIN ClientCompany cc ON eh.ClientCompanyID = cc.ClientCompanyID
+                WHERE eh.UserID = @UserID
+            `);
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('User Sales');
+
+        sheet.columns = [
+            { header: 'Export ID', key: 'ExportID' },
+            { header: 'Client Name', key: 'ClientName', width: 10},
+            { header: 'Product Name', key: 'ProductName', width: 30 },
+            { header: 'Quantity', key: 'Quantity' },
+            { header: 'Unit Price', key: 'PricePerUnit', width: 15 },
+            { header: 'Discount %', key: 'DiscountPercentage' },
+            { header: 'Total', key: 'Total', width: 15 },
+            { header: 'Export Date', key: 'ExportDate' , width: 15},
+        ];
+
+        for (const exportRecord of exportHistory.recordset) {
+            const productResult = await pool.request()
+                .input('ExportID', sql.Int, exportRecord.ExportID)
+                .query(`
+                    SELECT ep.Quantity, ep.PricePerUnit, ep.DiscountPercentage, p.Name AS ProductName
+                    FROM ExportedProduct ep
+                    JOIN Product p ON ep.ProductID = p.ProductID
+                    WHERE ep.ExportID = @ExportID
+                `);
+
+            for (const prod of productResult.recordset) {
+                sheet.addRow({
+                    ExportID: exportRecord.ExportID,
+                    ClientName: exportRecord.ClientName,
+                    ProductName: prod.ProductName,
+                    Quantity: prod.Quantity,
+                    PricePerUnit: prod.PricePerUnit.toFixed(2),
+                    DiscountPercentage: prod.DiscountPercentage || 0,
+                    Total: (prod.PricePerUnit * prod.Quantity).toFixed(2),
+                    ExportDate: exportRecord.ExportDate.toISOString().split('T')[0]
+                });
+            }
+        }
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=User_Sales_${userId}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error('Error exporting user sales: ', err);
+        res.status(500).json({ message: 'Failed to export user sales' });
+    }
+});
+
 
 //getting the featured products
 router.get('/featured-products', async (req, res) => {

@@ -196,7 +196,6 @@ export default function ProductCatalog() {
             const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
             const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
             const total = (pricePerUnit * product.quantity).toFixed(2);
-            content += `Client: ${clients.find(c => c.ClientCompanyID === parseInt(selectedClient))?.Name || 'Not selected'}\n\n`;
             content += `${product.Name}\n`;
             content += `Quantity: ${product.quantity}\n`;
             content += `Price per unit: $${pricePerUnit.toFixed(2)}\n`;
@@ -205,6 +204,7 @@ export default function ProductCatalog() {
             }
             content += `Total: $${total}\n\n`;
         });
+        content += `Client: ${clients.find(c => c.ClientCompanyID === parseInt(selectedClient))?.Name || 'Not selected'}\n\n`;
         content += `Total Price (no tax): $${getTotalPrice().toFixed(2)}\n`;
         content += `Total Price (with tax 20%): $${getTotalWithTax()}\n`;
         const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});

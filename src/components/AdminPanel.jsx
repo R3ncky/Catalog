@@ -142,6 +142,30 @@ export default function AdminPanel(){
         }
     };
 
+    const handleExport = async (userId) => {
+        try{
+            const response = await fetch(`http://localhost:5000/api/export/user/${userId}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if(!response.ok)
+            {
+                throw new Error('Failed to export sales data');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sales_data_user_${userId}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+    } catch(err) {
+        console.error('Export error: ', err);
+        alert('Failed to export sales data');
+    }
+}
     const handleRegister = async (e) => {
         e.preventDefault();
         try{
@@ -419,6 +443,7 @@ export default function AdminPanel(){
                         </div>
                         <div className="product-actions">
                             <button onClick={() => startEditUser(user)}>Edit</button>
+                            <button onClick={() => handleExport(user.UserID)}>Export Sales</button>                            
                             <button onClick={() => handleUserDelete(user.userID)}>Delete</button>
                         </div>
                     </motion.div>
