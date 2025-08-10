@@ -420,7 +420,12 @@ export default function AdminPanel(){
                         <h3>{product.Name}</h3>
                         <p>{product.Description}</p>  
                         <p>${product.Price}</p>                  
-                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>
+                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>                        
+                        <p><strong>Price: ${product.Price}</strong></p>
+                        <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
+                        {product.DiscountPercentage > 0 && product.DiscountMinQty > 0 && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
+                            <p><strong>Discount: </strong>Qty: {product.DiscountMinQty}+ for {product.DiscountPercentage}%<br /> Valid until {new Date(product.DiscountEnd).toLocaleDateString()}</p>
+                        )}
                         </div>
                         <div className="product-actions">
                         <button onClick={() => startEdit(product)}>Edit</button>

@@ -84,6 +84,8 @@ router.post('/verify-2fa', async (req, res) => {
 //registering
 router.post('/register', async (req, res) => {
     const {username, email, password, isAdmin} = req.body;
+    const plainPassword = password; 
+
     try{
         const pool = await sql.connect();
         
@@ -102,7 +104,36 @@ router.post('/register', async (req, res) => {
                                 OUTPUT INSERTED.UserID
                                 VALUES (@Username, @Email, @PasswordHash, 0)`);
         const newUserID = result.recordset[0].UserID;
-        res.status(201).json({message: 'Registered user successfully', userId:newUserID});
+
+    // Send credentials (don't fail the request if email fails)
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your account credentials',
+            text:
+            `Hi ${username},
+
+            Your account has been created.
+
+            Email: ${email}
+            Password: ${plainPassword}
+
+            You can log in at http://localhost:5000/login`,
+            html: `
+                <div style="font-family:Arial,sans-serif;line-height:1.5">
+                    <h2>Hi ${username},</h2>
+                    <p>Your account has been created.</p>
+                    <p><strong>Email:</strong> ${email}<br/>
+                    <strong>Password:</strong> ${plainPassword}</p>
+                    <p>Login: <a href="http://localhost:3000/login">http://localhost:3000/login</a></p>
+                </div>`
+        });
+    } catch (mailErr) {
+      console.error('Welcome email failed:', mailErr);
+    }
+
+    res.status(201).json({ message: 'Registered user successfully', userId: newUserID });
 
     } catch(err){
         console.error('Error message: ', err);
@@ -144,6 +175,7 @@ router.post('/send-export-email', authenticateToken, async(req, res) => {
         let htmlContent = `
             <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
                 <h2 style="color: #2d89ef;">Hello ${client.Name},</h2>
+                <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
                 <p>Here is your exported product list:</p>
                 <ul style="padding-left: 0; list-style: none;">`;
         
@@ -298,6 +330,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
             <div style="font-family: Arial, sans-serif; color: #333;">
                     <h2>Hello ${client.Name},</h2>
                     <p>Your exported product list is attached as an Excel file.</p>
+                    <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
                     <p>Summary:</p>
                     <ul>
                         <li><strong>Total Products:</strong> ${productList.length}</li>
