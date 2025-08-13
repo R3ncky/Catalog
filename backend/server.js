@@ -3,7 +3,7 @@ import express from 'express';
 import sql from 'mssql';
 import router from './routes.js';
 import cors from 'cors';
-import './discountCleanUp.js'; 
+import {startCleanups} from './discountCleanUp.js'; 
 
 dotenv.config();
 const app = express();
@@ -25,6 +25,9 @@ const config = {
 console.log("Connecting to:", config.server);
 sql.connect(config).then(() => {
     console.log("Connected to the database");
+
+    startCleanups(); 
+    
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () =>{
         console.log(`Server is running on http://localhost:${PORT}`);

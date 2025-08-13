@@ -19,6 +19,7 @@
     "framer-motion": "^12.15.0",
     "msnodesqlv8": "^4.5.0",
     "mssql": "^11.0.1",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

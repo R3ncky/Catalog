@@ -10,6 +10,7 @@ export default function Index(){
     const [username, setUsername] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
     const [categories, setCategories] = useState([]);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -102,18 +103,18 @@ export default function Index(){
     let authSection;
     if(token){
         authSection = (
-            <div className='navbar-right-index'>
+            <>
                 <div className='welcome-message'>
                 <span>Welcome, {username}</span>
                 </div>
                 <button className='right-button-index' onClick={handleLogOut}>Logout</button>
-            </div>
+            </>
         );
     } else {
-        authSection = (
-            <div className='navbar-right-index'>
+        authSection = ( 
+            <>     
                 <button className='right-button-index' onClick={goToLogin}>Login</button>
-            </div>
+            </>
         );
     }
 
@@ -134,7 +135,10 @@ export default function Index(){
             <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
             {adminButton}
             </div>
+            <button className='menu-toggle' aria-expanded={menuOpen} aria-label='Toggle Menu' onClick={() => setMenuOpen(v => !v)}>☰</button>
+            <div className={`navbar-right-index ${menuOpen ? 'is-open' : ''}`}>
             {authSection}
+            </div>
             </div>  
             </header>
             <main className='main-content'>

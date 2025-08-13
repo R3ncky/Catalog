@@ -7,6 +7,7 @@ export default function TermsConditions() {
     const [token, setToken] = useState(null);
     const [username, setUsername] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -90,22 +91,23 @@ export default function TermsConditions() {
     };
 
     let authSection;
-    if (token) {
+    if(token){
         authSection = (
-            <div className='navbar-right-index'>
+            <>
                 <div className='welcome-message'>
-                    <span>Welcome, {username}</span>
+                <span>Welcome, {username}</span>
                 </div>
                 <button className='right-button-index' onClick={handleLogOut}>Logout</button>
-            </div>
+            </>
         );
     } else {
-        authSection = (
-            <div className='navbar-right-index'>
+        authSection = ( 
+            <>     
                 <button className='right-button-index' onClick={goToLogin}>Login</button>
-            </div>
+            </>
         );
     }
+
 
     let adminButton;
     if (token && isAdmin) {
@@ -116,17 +118,20 @@ export default function TermsConditions() {
 
     return (
         <div className="page-container">
-            <header>
-                <div className="navbar-index">
-                    <div className='navbar-left-index'>
+             <header>
+                        <div className="navbar-index">               
+                        <div className='navbar-left-index'>
                         <HomeButton />
                         <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
                         <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
                         {adminButton}
-                    </div>
-                    {authSection}
-                </div>
-            </header>
+                        </div>
+                        <button className='menu-toggle' aria-expanded={menuOpen} aria-label='Toggle Menu' onClick={() => setMenuOpen(v => !v)}>☰</button>
+                        <div className={`navbar-right-index ${menuOpen ? 'is-open' : ''}`}>
+                        {authSection}
+                        </div>
+                        </div>  
+                        </header>
             <main className="main-content">
                 <h2>Terms and Conditions</h2>
                 <div className="about-us-container">

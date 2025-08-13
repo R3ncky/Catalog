@@ -62,7 +62,7 @@ export default function TwoFactorForm() {
                         <input className="input-login" type="text" name="code"
                             value={code} onChange={(e) => setCode(e.target.value)} required /><br />
                         {error && <p className="error">{error}</p>}
-                        <button type="submit" className="submit-button">Verify</button>
+                        <button type="submit" className="btn">Verify</button>
                     </div>
                 </form>
             </div>

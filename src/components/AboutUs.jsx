@@ -8,6 +8,7 @@ export default function AboutUs(){
     const [token, setToken] = useState(null);
     const [username, setUsername] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -95,20 +96,21 @@ export default function AboutUs(){
     let authSection;
     if(token){
         authSection = (
-            <div className='navbar-right-index'>
+            <>
                 <div className='welcome-message'>
                 <span>Welcome, {username}</span>
                 </div>
                 <button className='right-button-index' onClick={handleLogOut}>Logout</button>
-            </div>
+            </>
         );
     } else {
-        authSection = (
-            <div className='navbar-right-index'>
+        authSection = ( 
+            <>     
                 <button className='right-button-index' onClick={goToLogin}>Login</button>
-            </div>
+            </>
         );
     }
+
 
     let adminButton;
     if(token && isAdmin){
@@ -119,21 +121,24 @@ export default function AboutUs(){
 
     return(
         <div className="page-container">
-        <header>
-        <div className="navbar-index">               
-        <div className='navbar-left-index'>
-        <HomeButton />
-        <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
-        <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
-        {adminButton}
-        </div>
-        {authSection}
-        </div>  
-        </header>
+         <header>
+                    <div className="navbar-index">               
+                    <div className='navbar-left-index'>
+                    <HomeButton />
+                    <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
+                    <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
+                    {adminButton}
+                    </div>
+                    <button className='menu-toggle' aria-expanded={menuOpen} aria-label='Toggle Menu' onClick={() => setMenuOpen(v => !v)}>☰</button>
+                    <div className={`navbar-right-index ${menuOpen ? 'is-open' : ''}`}>
+                    {authSection}
+                    </div>
+                    </div>  
+                    </header>
         <main className="main-content">
         <h2>About us</h2>
         <div className="about-us-container">
-           <img src="../assets/blue-sky.jpg" alt="" className="about-us-image"/>
+           <img src="../assets/doge.jpg" alt="" className="about-us-image"/>
             <div className="about-us-text">
             <p>Welcome to Catalog App, your trusted source for honest and detailed information about cosmetic products. 
                Whether you're searching for the perfect makeup sponge, a gentle shampoo, nourishing soaps, or other beauty essentials, 

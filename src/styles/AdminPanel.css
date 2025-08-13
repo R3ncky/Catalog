@@ -14,7 +14,7 @@
     background-color: white;
     padding: 2rem;
     border-radius: 8px;
-    width: 400px;
+    width: 800px;
     max-height: 90vh;
     overflow-y: auto;
 }
@@ -105,4 +105,154 @@
 }
 .admin-price-input{
     appearance: textfield;;
+}
+/* Overlay */
+.modal-overlay{
+  position: fixed; inset: 0;
+  display:flex; align-items:center; justify-content:center;
+  padding: 24px;
+  background: rgba(10,15,20,.45);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+}
+
+/* Card */
+.modal-card{
+  width: min(840px, 94vw);
+  max-height: 88vh;
+  display:flex; flex-direction:column;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+/* Header */
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+.modal-header h3{ margin:0; font-size: 1.2rem; font-weight: 700; }
+
+/* Close button */
+.icon-btn{
+  width: 34px; height:34px; border-radius: 8px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #fff; cursor:pointer; font-size: 22px; line-height: 1;
+}
+.icon-btn:hover{ background:#fafafa; }
+
+/* Body */
+.modal-body{
+  padding: 18px 20px;
+  overflow:auto;
+  display:flex; flex-direction:column; gap:14px;
+}
+
+/* Footer */
+.modal-footer{
+  padding: 14px 20px;
+  display:flex; justify-content:flex-end; gap:10px;
+  border-top: 1px solid rgba(0,0,0,.06);
+  background: #fcfcfc;
+  position: sticky; bottom: 0;
+}
+
+/* Form bits */
+.form-field{ display:flex; flex-direction:column; gap:6px; }
+.form-field > span{ font-size: .9rem; color:#444; font-weight:600; }
+.form-field input,
+.form-field textarea{
+  width: 90%;
+  padding: 10px 12px;
+  border:1px solid #dfe3e8;
+  border-radius:10px;
+  font-size: .95rem;
+  background:#fff;
+}
+.form-field input:focus,
+.form-field textarea:focus{
+  outline:none;
+  border-color:#6aa5ff;
+  box-shadow: 0 0 0 3px rgba(76,132,255,.15);
+}
+.form-field .number{
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.form-field .number::-webkit-outer-spin-button,
+.form-field .number::-webkit-inner-spin-button{ -webkit-appearance: none; margin:0; }
+
+/* Layout grids */
+.grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px){ .grid-2{ grid-template-columns: 1fr; } }
+
+/* Fieldset */
+.fieldset{
+  border: 1px solid #eef0f2; border-radius:12px;
+  padding: 12px; margin: 4px 0 2px;
+}
+.fieldset legend{
+  padding:0 6px; font-weight:700; font-size:.9rem; color:#333;
+}
+.checkbox-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+.check{ display:flex; align-items:center; gap:8px; color:#333; }
+
+/* Toggles row */
+.toggle-row{
+  display:flex; gap: 18px; align-items:center; flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn{
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: 700; cursor:pointer;
+}
+.btn.primary{
+  background:#2563eb; color:#fff; border-color:#2563eb;
+}
+.btn.primary:hover{ filter: brightness(1.05); }
+.btn.ghost{
+  background:#fff; color:#111; border-color:#e5e7eb;
+}
+.btn.ghost:hover{ background:#f8fafc; }
+
+/* (Optional) soften your backdrop on the page behind the modal */
+.page-container { filter: none; }
+.form-field{ display:flex; flex-direction:column; gap:6px; margin-bottom: 1rem; }
+.form-field > span{ font-size:.9rem; color:#444; font-weight:600; }
+
+/* 90% width controls */
+.form-field input,
+.form-field textarea,
+.form-field select{
+  width: 90%;          /* <-- as requested, NOT 100% */
+  padding: 10px 12px;
+  border:1px solid #dfe3e8;
+  border-radius:10px;
+  font-size:.95rem;
+  background:#fff;
+}
+
+/* optional nicer textarea height */
+.form-field textarea{ min-height: 96px; resize: vertical; }
+
+/* modal width (if you want the wider version) */
+.edit-grid{
+  background-color:#fff;
+  padding:2rem;
+  border-radius:12px;
+  width:min(840px, 95vw);
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
 }

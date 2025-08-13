@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useRef, use} from "react";
 import '../styles/FeaturedCarousel.css';
 import { animate, AnimatePresence, motion } from "framer-motion";
+import { parse } from "dotenv";
 
 export default function FeaturedCarousel() {
     const [products, setProducts] = useState([]);
@@ -22,18 +23,24 @@ export default function FeaturedCarousel() {
     }, [isHovered]);
 
     const scroll = (direction) => {
-        const scrollAmount = 300;
         const container = containerRef.current;
         if (!container) return;
-        if (direction === 'right') { 
-        const maxScrollLeft = container.scrollWidth - container.clientWidth;
-            if(container.scrollLeft + container.clientWidth >= container.scrollWidth - 5) {
+        const firstItem = container.querySelector('.carousel-item');
+        if (!firstItem) return;
+        const itemWidth = firstItem.offsetWidth;
+        const gap = parseInt(getComputedStyle(container).columnGap || getComputedStyle(container).gap || '0', 10);
+        const step = itemWidth + gap;
+
+        if(direction === 'right') {
+            const atEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 5;
+            if(atEnd) {
                 container.scrollTo({ left: 0, behavior: 'smooth' });
             } else {
-                container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                container.scrollBy({ left: step, behavior: 'smooth' });
             }
-        } else {
-            container.scrollBy({left: -scrollAmount, behavior: 'smooth'});
+        }
+        else {
+            container.scrollBy({ left: -step, behavior: 'smooth' });
         }
     };
 

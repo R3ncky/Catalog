@@ -313,3 +313,141 @@ button:active {
         width: 90%;
     }
 }
+/* --- General fluid tweaks --- */
+/*
+:root{
+ 
+  --gutter: clamp(12px, 3vw, 24px);
+}
+
+.page-container{ padding-inline: var(--gutter); }
+.navbar-index{
+  padding: 12px var(--gutter);
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+  */
+
+/* Prevent tiny tap targets */
+button, .button-footer { font-size: 16px; }
+
+/* --- Hero: more responsive and legible --- */
+.hero-banner{
+  min-height: 360px;
+  height: clamp(360px, 42vw, 520px);
+  border-radius: 12px;
+  margin: 24px auto 16px;
+}
+.hero-content h1{
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+}
+.hero-content p{
+  font-size: clamp(.95rem, 1.6vw, 1.2rem);
+}
+.hero-button{
+  width: auto;
+  min-width: 180px;
+}
+
+/* --- Navbar: layout + hamburger --- */
+.navbar-index{
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom: 3px solid rgb(255, 160, 122);
+}
+.navbar-left-index{ display:flex; align-items:center; gap: 16px; }
+
+.menu-toggle{
+  display: none;
+  border: 1px solid rgba(0,0,0,.1);
+  background:#fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Right side defaults to row on desktop */
+.navbar-right-index{
+  display:flex; align-items:center; gap: 16px;
+}
+
+/* --- Category grid: clean wrapping --- */
+/*
+.category-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  max-width: var(--page-max);
+  margin: 12px auto 0;
+  padding-inline: var(--gutter);
+}
+.category-buttons{
+  width: 100%;
+  max-width: 220px;
+  justify-self: center;
+}
+/*
+
+
+.index-footer{ padding: 24px var(--gutter); }
+.footer-content{ max-width: var(--page-max); }
+*/
+/* ====== Breakpoints ====== */
+
+/* Tablet-ish */
+@media (max-width: 900px){
+  .navbar-index{ gap: 10px; }
+  .navbar-left-index{ gap: 12px; }
+}
+
+/* Phone */
+@media (max-width: 640px){
+  /* Show hamburger */
+  .menu-toggle{ display:inline-flex; }
+
+  /* Stack nav sections, collapse right menu */
+  .navbar-index{ flex-wrap: wrap; }
+  .navbar-right-index{
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+    display: none;            /* collapsed by default */
+  }
+  .navbar-right-index.is-open{ display:flex; }
+
+  /* Left buttons wrap more nicely */
+  .navbar-left-index{
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .left-buttons-index, .current-index{
+    padding: 8px 12px;
+  }
+
+  /* Hero button full width but capped */
+  .hero-button{
+    width: 100%;
+    max-width: 320px;
+  }
+
+  /* Category buttons full width in grid cells */
+  .category-buttons{
+    max-width: none;
+    height: 44px;
+  }
+
+  /* Footer stacks */
+  .footer-content{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px){
+  .navbar-left-index{ gap: 6px; }
+  .right-button-index, .left-buttons-index, .current-index{ font-size: 14px; }
+  .hero-content{ padding-inline: 8px; }
+}

@@ -91,3 +91,63 @@ label{
 .left-buttons-login:hover::after{
     transform: translateX(-50%) scaleX(1);    
 }
+/* Mobile layout (phones) */
+@media (max-width: 640px){
+  .navbar-login{
+    padding: 12px 16px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .navbar-left-login{
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .left-buttons-login{
+    margin-top: 0;           /* remove desktop bump */
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+
+  .form-login{
+    padding: 2rem 12px;      /* add side padding, less top */
+  }
+
+  .sub-form{
+    width: 92vw;             /* fill screen comfortably */
+    max-width: 480px;
+    height: auto;            /* let it grow */
+    padding: 16px 14px 20px; /* inner spacing */
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  }
+
+  .h2-login{
+    margin: 1rem 0 1.25rem;
+    font-size: 1.25rem;
+  }
+
+  label{
+    width: 100%;
+    padding-left: 4px;       /* tighter on mobile */
+    font-size: .95rem;
+    opacity: .8;
+  }
+
+  .input-login{
+    width: 100%;
+    max-width: none;
+    padding: 12px 16px;
+    margin-top: 6px;
+    border-radius: 12px;     /* less “pill”, better keyboard fit */
+    background-color: #EAEEED;
+  }
+
+  .btn{
+    width: 100%;
+    padding: 12px 16px;
+    margin-top: 14px;
+    border-radius: 12px;
+    font-size: 1rem;
+  }
+}

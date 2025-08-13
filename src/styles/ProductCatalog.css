@@ -1,7 +1,9 @@
 .product-page{
     max-width: 1800px;
-    display: flex;
+    display: grid;
     margin: auto;
+    grid-template-columns: 320px 1fr;
+    gap:24px;
 }
 .header2{
     text-align: center;
@@ -98,29 +100,29 @@
     transform: translateX(-50%) scaleX(1);
 }
 .product-grid{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    max-width: 960px;
-    margin: auto;
-    gap: 15px;
-    padding: 20px;
-    padding-right: 15%;
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap:16px;
+    padding: 16px;
+    max-width: 100%;       /* <-- remove fixed 960 + right padding */
+    margin: 0;
+    padding-right: 0;
 }
 .product-card{
-    border: 1px solid black;
-    padding: 15px;
-    border-radius: 8px;
-    background-color: #fafafa;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,.12);
+    padding: 14px;
+    border-radius: 12px;
+    background-color:#fafafa;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 .product-image{
-    width: 100%;
-    height: auto;
-    max-width: 250px;
-    max-height: 250px;
+    width:100%;
+    aspect-ratio: 1 / 1;   /* square, consistent tiles */
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 10px;
     margin-bottom: 10px;
+    max-width:none;
+    max-height:none;
 }
 .pagination-controls{
     text-align: center;
@@ -146,17 +148,32 @@
 }
 
 .search-bar{
+    display: flex;
     margin: 10px 0 20px;
     text-align: center;
-    padding-right: 160px;
+    padding: 10px 0;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
 }
 .search-input{
-    padding: 0.5rem;   
+    width: min(920px, 100%);
+    padding: 12px 14px 12px 42px;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 12px;
+    background: #fff;
     font-size: 1rem;
-    width: 100%;
-    max-width: 940px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    transition: box-shadow .2s, border-color .2s;
+    background-image: url("data:image/svg+xml;utf8,\<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    background-repeat: no-repeat;
+    background-position: 14px 50%;
+    background-size: 18px 18px;
+}
+.search-input:focus{
+  outline: none;
+  border-color: #ff9770;
+  box-shadow: 0 0 0 3px rgba(255,151,112,.2);
 }
 .display-flex2{
     flex: auto;
@@ -211,17 +228,20 @@
     cursor: pointer;
 }
 .show-list-button{
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 10px 15px;
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    z-index: 1000;
+    position: static;             /* inline next to the input on desktop */
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,.08);
+    background: #7a9de9;          /* blue CTA */
+    color: #fff;
+    font-weight: bold;
     cursor: pointer;
-}
+    box-shadow: 0 6px 16px rgba(37,99,235,.25);
+    transition: transform .05s, box-shadow .2s, filter .15s;
+    margin-bottom: 10px;
+  }
+.show-list-button:hover{ filter: brightness(1.05); }
+.show-list-button:active{ transform: translateY(1px); } 
 .list-modal{
     position: fixed;
     top: 10%;
@@ -484,7 +504,8 @@
   .filters-card{
     position: static;
     width: 100%;
-    margin: 0 0 10px;
+    margin: 0 0 12px;
+    padding: 14px;
   }
   .filters-categories{
     grid-template-columns: repeat(2, minmax(0,1fr));
@@ -644,7 +665,7 @@
   color: #2d3436;
   font-weight: 700;
   cursor: pointer;
-  transition: transform .05s, box-shadow .2s, background .2s, border-color .2s, color .2s;
+  transition: transform .05s, box-shadow .2s, border-color .2s, color .2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   margin: 8px 0;
   text-align: center;
@@ -697,4 +718,237 @@
   z-index: 1000;
 }
 .list-modal{ z-index: 1001; }
+/* Hamburger default hidden on desktop */
+.menu-toggle{
+  display:none;
+  border:1px solid rgba(0,0,0,.1);
+  background:#fff;
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:20px;
+  cursor:pointer;
+}
+
+/* Mobile navbar behavior */
+@media (max-width:640px){
+  .menu-toggle{ display:inline-flex; }
+  .navbar{ flex-wrap:wrap; padding: 12px 16px; gap: 8px; }
+  .navbar-left{
+    flex: 1 1 100%;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .navbar-right{
+    width:100%;
+    justify-content:flex-end;
+    margin-top: 0;
+    /*display:none;*/
+  }
+  .left-buttons,
+  .Current-Button{
+    margin-top: 0;           /* remove the 20px bump */
+    padding: 8px 10px;       /* slightly smaller tap targets */
+    font-size: 15px;
+  }
+  .home-button{ width: 44px; height: 44px; }
+  .navbar-right.is-open{ display:flex; }
+  .list-modal{
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 85vh;
+    top: auto;
+    bottom: 0;
+    border-left: none;
+    border-top: 2px solid #ccc;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -6px 24px rgba(0,0,0,0.18);
+    padding: 16px;
+  }
+  .pagination-controls button {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .menu-toggle{
+    display: inline-flex;
+    margin-left: auto;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+}
+/* Tablet: slightly larger tiles */
+@media (max-width:900px){
+  .search-bar{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 8px 12px;
+  }
+  .search-input{ width: 100%; }
+  .show-list-button{
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 1000;
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 10px 24px rgba(37,99,235,.28);
+  }
+}
+
+/* Phones */
+@media (max-width:640px){
+  .product-grid{
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap:12px;
+    padding:12px;
+  }
+  .search-bar{
+    padding: 10px 50px 10px 10px;
+  }
+  .search-input{
+    width: 100%;
+    max-width: none;
+  }
+  .show-list-button{
+    position: fixed;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 1000;
+    padding: 10px 14px;
+    border-radius: 14px;
+    width: max-content;
+    max-width: calc(100vw - 24px);  /* never overflow screen */
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgba(37,99,235,.28);
+  }
+  .display-flex2{ padding-bottom: 96px; }
+  
+}
+@media (max-width: 380px){
+  .show-list-button{ right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); padding: 10px 14px; }
+}
+/* 1) Narrow the left column on desktop/tablet */
+.product-page{
+  grid-template-columns: 260px 1fr;   /* was 320px */
+  gap: 20px;                          /* a bit tighter */
+}
+
+/* 2) Make the card itself slimmer */
+.filters-card{
+  width: 90%;
+  padding: 12px;                       /* 16 -> 12 */
+  margin-left: 8px;                    /* 20 -> 8 */
+  border-radius: 12px;                 /* 16 -> 12 */
+}
+
+/* 3) Tighter header + text sizes */
+.filters-header{ margin-bottom: 6px; }
+.filters-header h3{ font-size: 1rem; }
+
+/* 4) Sections & legend a touch smaller */
+.filters-section{
+  padding-top: 8px;
+  margin-top: 10px;
+}
+.filters-section legend{
+  font-size: 0.9rem;
+}
+
+/* 5) Category pills a bit denser */
+.filters-categories{ gap: 6px; max-height: 200px; }
+.pill{ padding: 6px 8px; gap: 6px; }
+.pill__text{ font-size: 0.88rem; }
+.pill input{ width: 14px; height: 14px; border-width: 2px; }
+
+/* 6) Price inputs & select: 100% inside the narrow card */
+.input-row{ gap: 8px; }
+.input-group{ gap: 4px; }
+.input{
+  width: 70%;                         /* fill the column */
+  padding: 8px 10px;                   /* 10/12 -> 8/10 */
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+.select-wrap select{
+  width: 92%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}
+
+/* 7) Price chips a little smaller */
+.price-quick-actions{ gap: 6px; }
+.price-chip{ padding: 6px 10px; font-size: .9rem; }
+
+/* Tablet: keep the slimmer column but allow a little more space */
+@media (max-width: 1200px){
+  .product-page{ grid-template-columns: 240px 1fr; }
+}
+
+/* Mobile: unchanged (filters on top, full width) */
+@media (max-width: 980px){
+  .product-page{ grid-template-columns: 1fr; gap: 16px; }
+  .filters-card{
+    margin-left: 0;
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .filters-categories{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+/* ===== Catalog header: stacked/centered mobile layout ===== */
+@media (max-width: 640px){
+  /* Whole bar: column + center */
+  .navbar{
+    position: relative;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 12px;
+  }
+
+  /* Left side becomes a centered column (logo + links) */
+  .navbar-left{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;      /* center all items */
+    gap: 14px;
+    flex-wrap: nowrap;
+  }
+
+  /* Logo smaller so links fit nicely under it */
+  .home-button{ width: 56px; height: 56px; }
+
+  /* Links: remove the desktop bump and keep your underline styles */
+  .left-buttons,
+  .Current-Button{
+    margin-top: 0;
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+
+  /* Right side (Welcome + Logout) collapses and shows when menu opens */
+  .navbar-right{
+    width: 100%;
+    justify-content: center;   /* centered under links */
+    margin-top: 4px;
+    display: none;             /* closed by default */
+  }
+  .navbar-right.is-open{ display: flex; }
+
+  /* Hamburger: float at the top-right like your screenshot */
+  .menu-toggle{
+    display: inline-flex;
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+}
 

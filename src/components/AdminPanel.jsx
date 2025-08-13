@@ -2,10 +2,10 @@ import { useState, useEffect } from "react";
 import HomeButton from "./HomeButton";
 import { useNavigate } from "react-router-dom";
 import '../styles/AdminPanel.css';
-import {motion, AnimatePresence} from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { parse } from "dotenv";
 
-export default function AdminPanel(){
+export default function AdminPanel() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -32,7 +32,7 @@ export default function AdminPanel(){
         imagePath: '',
         brand: '',
         stockqty: '',
-        isFeatured: false, 
+        isFeatured: false,
         isArchived: false
     });
 
@@ -43,31 +43,31 @@ export default function AdminPanel(){
             const payload = JSON.parse(atob(token.split('.')[1]));
             const now = Math.floor(Date.now() / 1000);
             return payload.exp < now;
-        } catch(e) {
+        } catch (e) {
             return true;
         }
     }
-    
-        const checkAndRefreshToken = () => {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            if(!token || isTokenExpired(token)) {
-                localStorage.removeItem('token');
-                sessionStorage.removeItem('token');
-                return;
-            }
 
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const now = Math.floor(Date.now() / 1000);
-            const timeLeft = payload.exp - now;
+    const checkAndRefreshToken = () => {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token || isTokenExpired(token)) {
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            return;
+        }
 
-            if(timeLeft < 300){
-                fetch('api/refresh-token', {
-                    method: 'POST',
-                    headers: {'Authorization' : `Bearer ${token}`}
-                })
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000);
+        const timeLeft = payload.exp - now;
+
+        if (timeLeft < 300) {
+            fetch('api/refresh-token', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
                 .then(res => res.json()).then(data => {
-                    if(data.token){
-                        if(localStorage.getItem('token')) {
+                    if (data.token) {
+                        if (localStorage.getItem('token')) {
                             localStorage.setItem('token', data.token);
                         } else {
                             sessionStorage.setItem('token', data.token);
@@ -77,21 +77,21 @@ export default function AdminPanel(){
                     localStorage.removeItem('token');
                     sessionStorage.removeItem('token');
                 });
-            }
-        };
-            
-    
-    
-        useEffect(() => {   
-          ['keydown', 'click'].forEach(event => window.addEventListener(event, checkAndRefreshToken));
-          return () => {
+        }
+    };
+
+
+
+    useEffect(() => {
+        ['keydown', 'click'].forEach(event => window.addEventListener(event, checkAndRefreshToken));
+        return () => {
             ['keydown', 'click'].forEach(event => window.removeEventListener(event, checkAndRefreshToken));
-          };
+        };
     }, []);
 
     useEffect(() => {
         setCurrentPage(1);
-        window.scrollTo({top: 0, behavior: 'smooth'});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [searchTerm]);
 
     //getting the products on load
@@ -101,7 +101,7 @@ export default function AdminPanel(){
                 Authorization: `Bearer ${token}`
             }
         })
-        .then(res => res.json()).then(data => setProducts(data)).catch(err => console.error('Fetch error: ', err));
+            .then(res => res.json()).then(data => setProducts(data)).catch(err => console.error('Fetch error: ', err));
     }, []);
 
     //getting the users
@@ -111,24 +111,26 @@ export default function AdminPanel(){
                 Authorization: `Bearer ${token}`
             }
         })
-        .then(res => res.json()).then(data => setUsers(data)).catch(err => console.error('Fetch users error: ', err));
+            .then(res => res.json()).then(data => setUsers(data)).catch(err => console.error('Fetch users error: ', err));
     }, []);
 
     //getting the categories 
     useEffect(() => {
         fetch('http://localhost:5000/api/categories')
-        .then(res => res.json()).then(data => {setCategories(data);
-            setCurrentPage(1);}).catch(err => console.error('Fetch categories error: ', err));
+            .then(res => res.json()).then(data => {
+                setCategories(data);
+                setCurrentPage(1);
+            }).catch(err => console.error('Fetch categories error: ', err));
     }, []);
 
     useEffect(() => {
         setCurrentPage(1);
-        window.scrollTo({top: 0, behavior: 'smooth'});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [showProducts, showUsers]);
 
-    const HandleDelete = async(id) => {
+    const HandleDelete = async (id) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this product?');
-        if(!confirmDelete) return;
+        if (!confirmDelete) return;
         try {
             await fetch(`http://localhost:5000/api/products/${id}`, {
                 method: 'DELETE',
@@ -137,21 +139,20 @@ export default function AdminPanel(){
                 }
             });
             setProducts(products.filter(p => p.ProductID !== id));
-        } catch(err) {
+        } catch (err) {
             console.error('Delete error: ', err);
         }
     };
 
     const handleExport = async (userId) => {
-        try{
+        try {
             const response = await fetch(`http://localhost:5000/api/export/user/${userId}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            if(!response.ok)
-            {
+            if (!response.ok) {
                 throw new Error('Failed to export sales data');
             }
             const blob = await response.blob();
@@ -161,55 +162,55 @@ export default function AdminPanel(){
             a.download = `sales_data_user_${userId}.xlsx`;
             a.click();
             window.URL.revokeObjectURL(url);
-    } catch(err) {
-        console.error('Export error: ', err);
-        alert('Failed to export sales data');
+        } catch (err) {
+            console.error('Export error: ', err);
+            alert('Failed to export sales data');
+        }
     }
-}
     const handleRegister = async (e) => {
         e.preventDefault();
-        try{
+        try {
             const res = await fetch('http://localhost:5000/api/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
-                }, 
-                body: JSON.stringify({username, email, password}),
+                },
+                body: JSON.stringify({ username, email, password }),
             });
 
-            if(res.ok){
+            if (res.ok) {
                 setUsername('');
                 setEmail('');
                 setPassword('');
                 setIsRegistering(false);
                 window.location.reload();
-            } else{
+            } else {
                 alert('Registration failed');
             }
-        } catch(err){
+        } catch (err) {
             console.error('Registration error ', err);
         }
     }
-    
-    const handleChange = (e) =>{
-        const fieldName = e.target.name;
-        let fieldValue; 
 
-        if(e.target.type === 'checkbox'){
+    const handleChange = (e) => {
+        const fieldName = e.target.name;
+        let fieldValue;
+
+        if (e.target.type === 'checkbox') {
             fieldValue = e.target.checked;
-        } else{
+        } else {
             fieldValue = e.target.value;
         }
 
-        const updatedForm = {...form};
+        const updatedForm = { ...form };
         updatedForm[fieldName] = fieldValue;
         setForm(updatedForm);
     };
 
-    const handleSubmit = async(e) =>{
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        try{
+        try {
             console.log('Token:', token);
             const res = await fetch('http://localhost:5000/api/products', {
                 method: 'POST',
@@ -219,23 +220,23 @@ export default function AdminPanel(){
                 },
                 body: JSON.stringify(form)
             });
-            if(res.ok) {
+            if (res.ok) {
                 const data = await res.json();
-                const  newProductId = data.productId;
+                const newProductId = data.productId;
                 console.log('Token:', token);
                 for (const categoryId of selectedCategories) {
-                await fetch('http://localhost:5000/api/product-category', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        categoryId,
-                        productId: newProductId
-                    })
-                });
-            }
+                    await fetch('http://localhost:5000/api/product-category', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            categoryId,
+                            productId: newProductId
+                        })
+                    });
+                }
 
                 setForm({
                     name: '',
@@ -250,11 +251,11 @@ export default function AdminPanel(){
                 setSelectedCategories([]);
                 //refresh products
                 window.location.reload();
-            } else{
+            } else {
                 alert('Failed to add product');
             }
-        } catch(err){
-            console.error('Add product error: ',err);
+        } catch (err) {
+            console.error('Add product error: ', err);
         }
     };
 
@@ -278,7 +279,7 @@ export default function AdminPanel(){
     };
 
     const handleEditChange = (e) => {
-        const {name, value, type, checked } = e.target;
+        const { name, value, type, checked } = e.target;
         setEditForm(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
@@ -286,7 +287,7 @@ export default function AdminPanel(){
     };
 
     const handleEditSubmit = async () => {
-        try{
+        try {
             const res = await fetch(`http://localhost:5000/api/products/${editForm.ProductID}`, {
                 method: 'PUT',
                 headers: {
@@ -295,14 +296,14 @@ export default function AdminPanel(){
                 },
                 body: JSON.stringify(editForm)
             });
-            if(res.ok){
-            setIsEditing(false);
-            setEditForm(null);
-            window.location.reload();
+            if (res.ok) {
+                setIsEditing(false);
+                setEditForm(null);
+                window.location.reload();
             } else {
                 alert('Failed to update product');
             }
-        } catch(err){
+        } catch (err) {
             console.error('Edit product error: ', err);
         }
     };
@@ -313,13 +314,13 @@ export default function AdminPanel(){
             Username: user.Username ?? '',
             Email: user.Email ?? '',
             IsAdmin: user.IsAdmin ?? false,
-            Password: '' 
+            Password: ''
         });
         setIsEditingUser(true);
     };
 
     const handleUserEditChange = (e) => {
-        const {name, value, type, checked} = e.target;
+        const { name, value, type, checked } = e.target;
         setEditingUser(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
@@ -327,14 +328,14 @@ export default function AdminPanel(){
     };
 
     const handleUserUpdate = async () => {
-        
+
         const userToSend = {
             username: editingUser.Username,
             email: editingUser.Email,
-            isAdmin: editingUser.IsAdmin 
+            isAdmin: editingUser.IsAdmin
         };
 
-        if(editingUser.Password && editingUser.Password.trim() !== ''){
+        if (editingUser.Password && editingUser.Password.trim() !== '') {
             userToSend.password = editingUser.Password;
         }
         try {
@@ -347,7 +348,7 @@ export default function AdminPanel(){
                 },
                 body: JSON.stringify(userToSend)
             });
-            if(res.ok){
+            if (res.ok) {
                 setIsEditingUser(false);
                 setEditingUser(null);
                 window.location.reload();
@@ -355,23 +356,23 @@ export default function AdminPanel(){
                 const errData = await res.json();
                 alert('Failed to update user');
             }
-        } catch(err) {
+        } catch (err) {
             console.error('Update user error: ', err);
         }
     };
 
     const handleUserDelete = async (id) => {
         const confirmDelete = window.confirm('Are you sure you want to delete this user?');
-        if(!confirmDelete) return;
+        if (!confirmDelete) return;
         try {
             const res = await fetch(`http://localhost:5000/api/users/${id}`, {
                 method: 'DELETE',
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
-            });  
+            });
             setUsers(users.filter(user => user.UserID !== id));
-        } catch(err) {
+        } catch (err) {
             console.error('Delete user error: ', err);
         }
     };
@@ -389,176 +390,470 @@ export default function AdminPanel(){
     const goToNext = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
     const goToLast = () => setCurrentPage(totalPages);
 
-    return(
+    return (
         <div>
             <header>
-                <div className="navbar-index">               
-                <div className='navbar-left-index'>
-                <HomeButton />
-                <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
-                <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
-                <button className="current-index" onClick={() => navigate(0)}>Admin Panel</button>
-                </div>
-                </div>  
-                </header>
-        <div className="admin-body">
-            <h2>Admin Panel</h2>
-            <button onClick={() => setIsAdding(true)} className="add-button">Add New Product</button>
-            <button onClick={() => setIsRegistering(true)} className='add-button'>Add new User</button>
-            <button onClick={() => {setShowProducts(true); setShowUsers(false);}} className='add-button'>Products</button>
-            <button onClick={() => {setShowUsers(true); setShowProducts(false);}} className='add-button'>Users</button>
-            <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input-admin"/>
-            <div>
-            {showProducts && (
-                <AnimatePresence>
-                {currentItems.map(product =>(
-                    <motion.div key={product.ProductID} className="product-horizontal-card"
-                    initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} 
-                    exit={{opacity: 0}} transition={{duration: 0.4}}>
-                        <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-horizontal-image" />
-                        <div className="product-info">
-                        <h3>{product.Name}</h3>
-                        <p>{product.Description}</p>  
-                        <p>${product.Price}</p>                  
-                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>                        
-                        <p><strong>Price: ${product.Price}</strong></p>
-                        <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
-                        {product.DiscountPercentage > 0 && product.DiscountMinQty > 0 && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
-                            <p><strong>Discount: </strong>Qty: {product.DiscountMinQty}+ for {product.DiscountPercentage}%<br /> Valid until {new Date(product.DiscountEnd).toLocaleDateString()}</p>
-                        )}
-                        </div>
-                        <div className="product-actions">
-                        <button onClick={() => startEdit(product)}>Edit</button>
-                        <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
-                        </div>
-                    </motion.div>                  
-                ))}
-                </AnimatePresence>
-            )}
-            {showUsers && (
-                <AnimatePresence>
-                {currentItems.map(user => (
-                    <motion.div key={user.UserID} className="product-horizontal-card"
-                    initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} 
-                    exit={{opacity: 0}} transition={{duration: 0.4}}>
-                        <div className="product-info">
-                            <h3>{user.Username}</h3>
-                            <p>Email: {user.Email}</p>
-                            <p>Admin: {user.IsAdmin ? 'Yes' : 'No'}</p>
-                        </div>
-                        <div className="product-actions">
-                            <button onClick={() => startEditUser(user)}>Edit</button>
-                            <button onClick={() => handleExport(user.UserID)}>Export Sales</button>                            
-                            <button onClick={() => handleUserDelete(user.userID)}>Delete</button>
-                        </div>
-                    </motion.div>
-                ))}
-                </AnimatePresence>
-            )}
-            </div>
-            {isEditing && editForm && (
-                <div className="edit-modal">
-                    <div className="edit-grid">
-                        <h3>Edit Product</h3>
-                        <input name="name" value={editForm.name} onChange={handleEditChange} placeholder="Name" style={{marginBottom: '1rem'}}/><br />
-                        <textarea name="description" value={editForm.description} onChange={handleEditChange} placeholder="Description" style={{marginBottom: '1rem'}}/><br />
-                        <input className="admin-price-input" name="price" type="number" value={editForm.price} onChange={handleEditChange} placeholder="Price" style={{marginBottom: '1rem'}}/><br />
-                        <input name="imagePath" value={editForm.imagePath} onChange={handleEditChange} placeholder="Image Path" style={{marginBottom: '1rem'}}/><br />
-                        <input name="brand" value={editForm.brand} onChange={handleEditChange} placeholder="Brand"  style={{marginBottom: '1rem'}}/><br />
-                        <input className="admin-price-input" name="stockqty" type="number" value={editForm.stockqty} onChange={handleEditChange} placeholder="Stock Qty" style={{marginBottom: '1rem'}}/><br />
-                        <label><input type="checkbox" name="isFeatured" checked={editForm.isFeatured} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
-                        <label><input type="checkbox" name="isArchived" checked={editForm.isArchived} onChange={handleEditChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
-                        <input className="admin-price-input" type="number" name="discountPercentage" placeholder="Discount %" value={editForm.discountPercentage} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
-                        <input className="admin-price-input" type="number" name="discountMinQty" placeholder="Min Qty for Discount" value={editForm.discountMinQty} onChange={handleEditChange} style={{marginBottom: '1rem'}}/><br />
-                        <input type="datetime-local" name="discountStart" placeholder="Discount Start" value={editForm.discountStart} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
-                        <input type="datetime-local" name="discountEnd" placeholder="Discount End" value={editForm.discountEnd} onChange={handleEditChange} style={{marginBottom: '1rem'}} /><br />
-                    <div className="product-actions">
-                        <button onClick={handleEditSubmit}  style={{marginBottom: '1rem'}}>Post</button><br />
-                        <button type="button" onClick={() => {setIsEditing(false); setEditForm(null);}}  style={{marginBottom: '1rem'}}>Cancel</button>
-                    </div>
+                <div className="navbar-index">
+                    <div className='navbar-left-index'>
+                        <HomeButton />
+                        <button className="left-buttons-index" onClick={() => navigate('/')}>Home</button>
+                        <button className="left-buttons-index" onClick={() => navigate('/catalog')}>Catalog</button>
+                        <button className="current-index" onClick={() => navigate(0)}>Admin Panel</button>
                     </div>
                 </div>
-            )}
-            {isAdding && (
-                <div className="edit-modal">
-                    <div className="edit-grid">
-                         <h3>Add New Product</h3>
-                         <form onSubmit={handleSubmit} style={{marginBottom: '2rem'}}>
-                            <input name="name" placeholder="Name" value={form.name} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
-                            <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
-                            <input className="admin-price-input" name="price" placeholder="Price" type="number" value={form.price} onChange={handleChange} required style={{marginBottom: '1rem'}}/><br />
-                            <input name="imagePath" placeholder="Image Path" value={form.imagePath} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
-                            <input name="brand" placeholder="Brand" value={form.brand} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
-                            <div style={{margin: '1rem'}}>
-                                <p>Select Categories:</p>
-                                {categories.map(cat => (
-                                    <label key={cat.CategoryID} style={{marginRight: '1rem', display: 'block'}}>
-                                        <input type="checkbox" value={cat.CategoryID} checked={selectedCategories.includes(cat.CategoryID)} onChange={(e) => {
-                                            const id = parseInt(e.target.value);
-                                            if (e.target.checked) {
-                                                setSelectedCategories(prev => [...prev, id]);
-                                            } else {
-                                                setSelectedCategories(prev => prev.filter(c => c !== id));
-                                            }
-                                        }} />
-                                        {cat.Name}
+            </header>
+            <div className="admin-body">
+                <h2>Admin Panel</h2>
+                <button onClick={() => setIsAdding(true)} className="add-button">Add New Product</button>
+                <button onClick={() => setIsRegistering(true)} className='add-button'>Add new User</button>
+                <button onClick={() => { setShowProducts(true); setShowUsers(false); }} className='add-button'>Products</button>
+                <button onClick={() => { setShowUsers(true); setShowProducts(false); }} className='add-button'>Users</button>
+                <input type="text" placeholder="Search by name.." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input-admin" />
+                <div>
+                    {showProducts && (
+                        <AnimatePresence>
+                            {currentItems.map(product => (
+                                <motion.div key={product.ProductID} className="product-horizontal-card"
+                                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+                                    <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-horizontal-image" />
+                                    <div className="product-info">
+                                        <h3>{product.Name}</h3>
+                                        <p>{product.Description}</p>
+                                        <p>${product.Price}</p>
+                                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'Available'}</p>
+                                        <p><strong>Price: ${product.Price}</strong></p>
+                                        <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
+                                        {product.DiscountPercentage > 0 && product.DiscountMinQty > 0 && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
+                                            <p><strong>Discount: </strong>Qty: {product.DiscountMinQty}+ for {product.DiscountPercentage}%<br /> Valid until {new Date(product.DiscountEnd).toLocaleDateString()}</p>
+                                        )}
+                                    </div>
+                                    <div className="product-actions">
+                                        <button onClick={() => startEdit(product)}>Edit</button>
+                                        <button onClick={() => HandleDelete(product.ProductID)}>Delete</button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    )}
+                    {showUsers && (
+                        <AnimatePresence>
+                            {currentItems.map(user => (
+                                <motion.div key={user.UserID} className="product-horizontal-card"
+                                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+                                    <div className="product-info">
+                                        <h3>{user.Username}</h3>
+                                        <p>Email: {user.Email}</p>
+                                        <p>Admin: {user.IsAdmin ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    <div className="product-actions">
+                                        <button onClick={() => startEditUser(user)}>Edit</button>
+                                        <button onClick={() => handleExport(user.UserID)}>Export Sales</button>
+                                        <button onClick={() => handleUserDelete(user.userID)}>Delete</button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    )}
+                </div>
+                {isEditing && editForm && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      {/* Header */}
+      <div className="modal-header">
+        <h3>Edit Product</h3>
+        <button
+          className="icon-btn"
+          onClick={() => { setIsEditing(false); setEditForm(null); }}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="modal-body">
+        {/* Name / Brand */}
+        <div className="grid-2">
+          <div className="form-field">
+            <span>Name</span>
+            <input
+              name="name"
+              value={editForm.name}
+              onChange={handleEditChange}
+              placeholder="Name"
+            />
+          </div>
+
+          <div className="form-field">
+            <span>Brand</span>
+            <select
+              name="brand"
+              value={editForm.brand}
+              onChange={handleEditChange}
+            >
+              <option value="">-- Select Brand --</option>
+              <option value="Aurora Essentials">Aurora Essentials</option>
+              <option value="Velora Naturals">Velora Naturals</option>
+              <option value="Nimbus Care">Nimbus Care</option>
+              <option value="Zenith Glow">Zenith Glow</option>
+              <option value="Moonpetal Organics">Moonpetal Organics</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="form-field">
+          <span>Description</span>
+          <textarea
+            name="description"
+            value={editForm.description}
+            onChange={handleEditChange}
+            placeholder="Description"
+          />
+        </div>
+
+        {/* Price / Stock */}
+        <div className="grid-2">
+          <div className="form-field">
+            <span>Price</span>
+            <input
+              className="admin-price-input"
+              name="price"
+              type="number"
+              value={editForm.price}
+              onChange={handleEditChange}
+              placeholder="Price"
+            />
+          </div>
+          <div className="form-field">
+            <span>Stock Qty</span>
+            <input
+              className="admin-price-input"
+              name="stockqty"
+              type="number"
+              value={editForm.stockqty}
+              onChange={handleEditChange}
+              placeholder="Stock Qty"
+            />
+          </div>
+        </div>
+
+        {/* Image */}
+        <div className="form-field">
+          <span>Image Path</span>
+          <input
+            name="imagePath"
+            value={editForm.imagePath}
+            onChange={handleEditChange}
+            placeholder="Image Path"
+          />
+        </div>
+
+        {/* Toggles */}
+        <div className="toggle-row">
+          <label className="check">
+            <input
+              type="checkbox"
+              name="isFeatured"
+              checked={editForm.isFeatured}
+              onChange={handleEditChange}
+            />
+            Featured
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              name="isArchived"
+              checked={editForm.isArchived}
+              onChange={handleEditChange}
+            />
+            Archived
+          </label>
+        </div>
+
+        {/* Discount */}
+        <div className="grid-2">
+          <div className="form-field">
+            <span>Discount %</span>
+            <input
+              className="admin-price-input"
+              type="number"
+              name="discountPercentage"
+              placeholder="Discount %"
+              value={editForm.discountPercentage}
+              onChange={handleEditChange}
+            />
+          </div>
+          <div className="form-field">
+            <span>Min Qty for Discount</span>
+            <input
+              className="admin-price-input"
+              type="number"
+              name="discountMinQty"
+              placeholder="Min Qty for Discount"
+              value={editForm.discountMinQty}
+              onChange={handleEditChange}
+            />
+          </div>
+        </div>
+
+        {/* Dates */}
+        <div className="grid-2">
+          <div className="form-field">
+            <span>Discount Start</span>
+            <input
+              type="datetime-local"
+              name="discountStart"
+              value={editForm.discountStart}
+              onChange={handleEditChange}
+            />
+          </div>
+          <div className="form-field">
+            <span>Discount End</span>
+            <input
+              type="datetime-local"
+              name="discountEnd"
+              value={editForm.discountEnd}
+              onChange={handleEditChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="modal-footer">
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => { setIsEditing(false); setEditForm(null); }}
+        >
+          Cancel
+        </button>
+        <button className="btn primary" onClick={handleEditSubmit}>
+          Save changes
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+                {isAdding && (
+                    <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setIsAdding(false)}>
+                        <motion.div className="modal-card"
+                            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.98, y: 8 }}
+                            transition={{ duration: 0.15 }}
+                            onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>Add New Product</h3>
+                                <button type="button" className="icon-btn" aria-label="Close" onClick={() => setIsAdding(false)}>×</button>
+                            </div>
+                            <form id="add-product-form" onSubmit={handleSubmit} className="modal-body">
+                                <div className="grid-2">
+                                    <label className="form-field">
+                                        <span>Name</span>
+                                        <input name="name" value={form.name} onChange={handleChange} required />
                                     </label>
-                                ))}
-                            </div><br />
-                            <input className="admin-price-input" name="stockqty" placeholder="Stock Qty" type="number" value={form.stockqty} onChange={handleChange} style={{marginBottom: '1rem'}}/><br />
-                            <label><input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} style={{marginBottom: '1rem'}}/>Featured</label><br />
-                            <label><input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} style={{marginBottom: '1rem'}}/>Archived</label><br />
-                        <div className="product-actions">
-                            <button type="submit" className="admin-buttons" style={{marginBottom: '1rem'}}>Post</button><br/>
-                            <button type="button" onClick={() => setIsAdding(false)} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button>
-                        </div>
-                         </form>
+                                    <label className="form-field">
+                                        <span>Brand</span>
+                                        <select name="brand"  value={form.brand}  onChange={handleChange} 
+                                        style={{marginBottom: '1rem', padding: '10px 12px', borderRadius: '10px', border: '1px solid #dfe3e8', background: 'white'}} required>
+                                            <option value="">-- Select Brand --</option>
+                                            <option value="Aurora Essentials">Aurora Essentials</option>
+                                            <option value="Velora Naturals">Velora Naturals</option>
+                                            <option value="Nimbus Care">Nimbus Care</option>
+                                            <option value="Zenith Glow">Zenith Glow</option>
+                                            <option value="Moonpetal Organics">Moonpetal Organics</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <label className="form-field">
+                                    <span>Description</span>
+                                    <textarea name="description" value={form.description} onChange={handleChange} rows={3} required />
+                                </label>
+                                <div className="grid-2">
+                                    <label className="form-field">
+                                        <span>Price</span>
+                                        <input className="number" name="price" type="number" step="0.01"  value={form.price} onChange={handleChange} required/>
+                                    </label>
+                                    <label className="form-field">
+                                        <span>Stock Qty</span>
+                                        <input className="number" name="stockqty" type="number" value={form.stockqty} onChange={handleChange}/>
+                                    </label>
+                                </div>
+                                <label className="form-field">
+                                    <span>Image Path</span>
+                                    <input name="imagePath" value={form.imagePath} onChange={handleChange} />
+                                </label>
+                                <fieldset className="fieldset">
+                                    <legend>Select Categories</legend>
+                                    <div className="checkbox-grid">
+                                        {categories.map((cat) => (
+                                            <label key={cat.CategoryID} className="check">
+                                                <input type="checkbox" value={cat.CategoryID} checked={selectedCategories.includes(cat.CategoryID)}
+                                                    onChange={(e) => {
+                                                        const id = parseInt(e.target.value, 10);
+                                                        setSelectedCategories((prev) =>
+                                                            e.target.checked ? [...prev, id] : prev.filter((c) => c !== id)
+                                                        );
+                                                    }}/>
+                                                <span>{cat.Name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </fieldset>
+                                <div className="toggle-row">
+                                    <label className="check">
+                                        <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />
+                                        <span>Featured</span>
+                                    </label>
+                                    <label className="check">
+                                        <input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange}/>
+                                        <span>Archived</span>
+                                    </label>
+                                </div>
+                            </form>
+                            <div className="modal-footer">
+                                <button type="button" className="btn ghost" onClick={() => setIsAdding(false)}>Cancel</button>
+                                <button type="submit" form="add-product-form" className="btn primary">Post</button>                                   
+                            </div>
+                        </motion.div>
                     </div>
+                )}
+
+                {isRegistering && (
+  <div className="modal-overlay">{/* was edit-modal */}
+    <div className="modal-card">{/* was edit-grid */}
+      <div className="modal-header">
+        <h3>Add New User</h3>
+        <button className="icon-btn" onClick={() => setIsRegistering(false)}>×</button>
+      </div>
+
+      <div className="modal-body">
+        <form onSubmit={handleRegister}>
+          <div className="form-field">
+            <span>Username</span>
+            <input type="text" placeholder="Username" value={username}
+              onChange={(e) => setUsername(e.target.value)} required />
+          </div>
+          <div className="form-field">
+            <span>Email</span>
+            <input type="text" placeholder="Email" value={email}
+              onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div className="form-field">
+            <span>Password</span>
+            <input type="password" placeholder="Password" value={password}
+              onChange={(e) => setPassword(e.target.value)} required />
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn ghost" onClick={() => setIsRegistering(false)}>Cancel</button>
+            <button type="submit" className="btn primary">Register</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
+
+
+               {isEditingUser && editingUser && (
+  <div className="modal-overlay">
+    <div className="modal-card">
+      {/* Header */}
+      <div className="modal-header">
+        <h3>Edit User</h3>
+        <button
+          className="icon-btn"
+          onClick={() => { setIsEditingUser(false); setEditingUser(null); }}
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="modal-body">
+        <div className="form-field">
+          <span>Username</span>
+          <input
+            type="text"
+            name="Username"
+            value={editingUser.Username}
+            onChange={handleUserEditChange}
+            placeholder="Username"
+          />
+        </div>
+
+        <div className="form-field">
+          <span>Email</span>
+          <input
+            type="email"
+            name="Email"
+            value={editingUser.Email}
+            onChange={handleUserEditChange}
+            placeholder="Email"
+          />
+        </div>
+
+        <div className="form-field">
+          <span>New password (optional)</span>
+          <input
+            type="password"
+            name="Password"
+            value={editingUser.Password}
+            onChange={handleUserEditChange}
+            placeholder="Leave blank to keep current"
+          />
+        </div>
+
+        <div className="toggle-row">
+          <label className="check">
+            <input
+              type="checkbox"
+              name="IsAdmin"
+              checked={editingUser.IsAdmin}
+              onChange={handleUserEditChange}
+            />
+            Admin
+          </label>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="modal-footer">
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => { setIsEditingUser(false); setEditingUser(null); }}
+        >
+          Cancel
+        </button>
+        <button className="btn primary" onClick={handleUserUpdate}>
+          Update
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+                <div className="pagination-controls">
+                    <button onClick={goToFirst} disabled={currentPage === 1}>First</button>
+                    <button onClick={goToPrev} disabled={currentPage === 1}>Previous</button>
+                    {[...Array(totalPages)].map((_, i) => (
+                        <button key={i} onClick={() => setCurrentPage(i + 1)}
+                            className={currentPage === i + 1 ? 'active-page' : ''}>
+                            {i + 1}
+                        </button>
+                    ))}
+                    <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
+                    <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
                 </div>
-            )}
-            {isRegistering && (
-                <div className="edit-modal">
-                    <div className="edit-grid">
-                        <h3>Add New User</h3>
-                        <form onSubmit={handleRegister} style={{marginBottom: '2rem'}}>
-                            <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
-                            <input type="text" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
-                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{marginBottom: '1rem'}}/><br />
-                        <div className="product-actions">
-                            <button type="submit" className="admin-buttons" style={{marginBottom: '1rem'}}>Register</button><br />
-                            <button type="button" onClick={() => setIsRegistering(false)} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button><br />
-                        </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-            {isEditingUser && editingUser && (
-                <div className="edit-modal">
-                    <div className="edit-grid">
-                        <h3>Edit User</h3>
-                        <input type="text" name="Username" value={editingUser.Username} onChange={handleUserEditChange} placeholder="Username" style={{marginBottom: '1rem'}}/><br />
-                        <input type="email" name="Email" value={editingUser.Email} onChange={handleUserEditChange} placeholder="Email" style={{marginBottom: '1rem'}}/><br />
-                        <input type="password" name="Password" value={editingUser.Password} onChange={handleUserEditChange} placeholder="New password (leave blank to keep current)" style={{marginBottom: '1rem'}}/><br />
-                        <label><input type="checkbox" name="IsAdmin" checked={editingUser.IsAdmin} onChange={handleUserEditChange} style={{marginBottom: '1rem'}}/>Admin</label><br />
-                    <div className="product-actions">    
-                        <button onClick={handleUserUpdate} className="admin-buttons" style={{marginBottom: '1rem'}}>Update</button><br />
-                        <button type="button" onClick={() => {setIsEditingUser(false); setEditingUser(null);}} className="admin-buttons" style={{marginBottom: '1rem'}}>Cancel</button>
-                    </div>
-                    </div>
-                </div>
-            )}
-            <div className="pagination-controls">
-                <button onClick={goToFirst} disabled={currentPage === 1}>First</button>
-                <button onClick={goToPrev} disabled={currentPage === 1}>Previous</button>
-                {[...Array(totalPages)].map((_,i) => (
-                    <button key={i} onClick={() => setCurrentPage(i+1)} 
-                    className={currentPage === i + 1 ? 'active-page' : ''}>
-                        {i+1}
-                    </button>
-                ))}
-                <button onClick={goToNext} disabled={currentPage === totalPages}>Next</button>
-                <button onClick={goToLast} disabled={currentPage === totalPages}>Last</button>
-            </div>
             </div>
         </div>
     )

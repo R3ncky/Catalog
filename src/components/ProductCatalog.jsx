@@ -19,6 +19,7 @@ export default function ProductCatalog() {
     const [clients, setClients] = useState([]);
     const [sortBy, setSortBy] = useState(null);
     const [selectedClient, setSelectedClient] = useState(null);
+    const [discountOnly, setDiscountOnly] = useState(false);
     const [userModifiedCategories, setUserModifiedCategories] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedList, setSelectedList] = useState([]);
@@ -26,6 +27,7 @@ export default function ProductCatalog() {
     const [quantities, setQuantities] = useState({});
     const [removalQuantities, setRemovalQuantities] = useState({});
     const [isAdmin, setIsAdmin] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const location = useLocation();
     const productsPerPage = 12;
     const navigate = useNavigate();
@@ -144,6 +146,8 @@ export default function ProductCatalog() {
                 });
         }
     };
+
+    useEffect(() => { setCurrentPage(1); }, [discountOnly]);
 
     useEffect(() => {
         ['keydown', 'click'].forEach(event => window.addEventListener(event, checkAndRefreshToken));
@@ -361,7 +365,14 @@ export default function ProductCatalog() {
         setSelectedCategories(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
     };
 
-    const filteredProducts = products.filter(product => product.Name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const isDiscountActive = (p) => {
+        const now = new Date();
+        const startOk = p.DiscountStart ? new Date(p.DiscountStart) <= now : true;
+        const endOk = p.DiscountEnd ? new Date(p.DiscountEnd) >= now : true;
+        return (p.DiscountPercentage || 0) > 0 && startOk && endOk;
+    }
+
+    const filteredProducts = products.filter(product => product.Name.toLowerCase().includes(searchTerm.toLowerCase())).filter(p => (discountOnly ? isDiscountActive(p) : true));
     const sortedProducts = (() => {
         if (sortBy === 'priceAsc') {
             return [...filteredProducts].sort((a, b) => a.Price - b.Price);
@@ -383,16 +394,14 @@ export default function ProductCatalog() {
     let authSection;
     if (token) {
         authSection = (
-            <div className='navbar-right'>
+            <>
                 <span>Welcome, {username}</span>
                 <button className="LoginButton" onClick={handleLogOut}>Logout</button>
-            </div>
+            </>
         );
     } else {
-        authSection = (
-            <div className='navbar-right'>
+        authSection = (        
                 <button className="LoginButton" onClick={goToLogin}>Login</button>
-            </div>
         );
     }
 
@@ -412,7 +421,10 @@ export default function ProductCatalog() {
                         <button className="Current-Button" onClick={() => navigate(0)}>Catalog</button>
                         {adminButton}
                     </div>
+                   <button className='menu-toggle' aria-expanded={menuOpen} aria-label='Toggle Menu' onClick={() => setMenuOpen(v => !v)}>☰</button>
+                   <div className={`navbar-right ${menuOpen ? 'is-open' : ''}`}>
                     {authSection}
+                    </div>
                 </div>
             </header>
             <main className="main-content">
@@ -518,7 +530,19 @@ export default function ProductCatalog() {
                                     </select>
                                 </div>
                             </fieldset>
+                            
                         )}
+                        <fieldset className="filters-section">
+                            <legend>Other</legend>
+                            <label className={`pill ${discountOnly ? 'pill--checked' : ''}`}>
+                                <input
+                                type="checkbox"
+                                checked={discountOnly}
+                                onChange={(e) => setDiscountOnly(e.target.checked)}
+                                />
+                                <span className="pill__text">Only discounted</span>
+                            </label>
+                            </fieldset>
                     </div>
 
                     <div className="display-flex2">

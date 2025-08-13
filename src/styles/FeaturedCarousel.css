@@ -1,53 +1,106 @@
 .carousel-wrapper{
-    padding: 2rem;
-    background-color: rgb(219, 255, 231);
-    margin-top: 1rem;
+  padding: 2rem;
+  background-color: rgb(219, 255, 231);
+  margin-top: 1rem;
 }
+
 .carousel-container{
-    display: flex;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
 }
+
+/* optional nice fade on edges */
+.carousel-container::before,
+.carousel-container::after{
+  content:"";
+  position:absolute; top:0; bottom:0; width:48px; pointer-events:none;
+  z-index:2;
+  background: linear-gradient(to right, rgb(219,255,231), rgba(219,255,231,0));
+}
+.carousel-container::after{
+  right:0; transform: scaleX(-1);
+}
+
 .carousel-row{
-    display: flex;
-    overflow-x: auto;
-    scroll-behavior: smooth;
-    gap: 1rem;
-    padding: 1rem 0;
-    scrollbar-width: none; /* Hide scrollbar for Firefox */
+  display: flex;
+  gap: 1rem;                 /* used by JS to compute step */
+  overflow-x: auto;
+  padding: 1rem 0;
+  scroll-behavior: smooth;
+  scrollbar-width: none;     /* firefox */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
 }
-.carousel-row::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for Chrome, Safari, and Opera */
-}
+.carousel-row::-webkit-scrollbar{ display:none; }
+
 .carousel-item{
-    flex: 0 0 auto;
-    width: 250px; /* Adjust width as needed */
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    padding: 1rem;
-    text-align: center;
+  flex: 0 0 auto;
+  /* responsive card width: grows on desktop, shrinks on phones */
+  width: clamp(220px, 32vw, 280px);
+  background:#fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  padding: 1rem;
+  text-align: center;
+  scroll-snap-align: start;
 }
 .carousel-item img{
-    width: 100%;
-    height: auto;
-    border-radius: 8px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
+
+/* arrows sit on top so they don't push layout */
 .arrow-button{
-    background: #333;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 1.5rem;
-    width: 40px;
-    height: 40px;
-    cursor: pointer;
-    z-index: 1;
+  position: relative;
+  z-index: 3;
+  background:#333;
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  font-size:1.4rem;
+  width:40px; height:40px;
+  cursor:pointer;
 }
-.arrow-button.left{
-    margin-right: 0.5rem;
+.arrow-button.left{ margin-right:.5rem; }
+.arrow-button.right{ margin-left:.5rem; }
+
+/* phones: cards a bit wider in viewport for easier tap */
+@media (max-width: 640px){
+  .carousel-wrapper{ padding: 1rem; }
+  .carousel-item{ width: clamp(220px, 75vw, 320px); }
+  .carousel-container::before,
+  .carousel-container::after{ width: 24px; } /* subtler fade on small screens */
 }
-.arrow-button.right{
-    margin-left: 0.5rem;
+/* Phones ≤ 480px */
+@media (max-width: 480px){
+  .carousel-wrapper{ padding: 12px; }
+
+  /* a touch narrower than before */
+  .carousel-item{
+    width: clamp(220px, 84vw, 300px);
+    padding: 12px;
+  }
+
+  /* keep image from getting too tall */
+  .carousel-item img{
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  /* arrows a little smaller + tighter fade */
+  .arrow-button{ width: 36px; height: 36px; font-size: 1.2rem; }
+  .carousel-container::before,
+  .carousel-container::after{ width: 18px; }
+}
+
+/* Very small phones ≤ 360px */
+@media (max-width: 360px){
+  .carousel-item{
+    width: clamp(220px, 90vw, 280px);
+    padding: 10px;
+  }
+  .arrow-button{ width: 32px; height: 32px; font-size: 1.1rem; }
 }
