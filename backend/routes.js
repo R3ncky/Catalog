@@ -15,6 +15,11 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+function calculateUnitPrice(p) {
+  const hasDiscount = p.DiscountPercentage > 0 && p.quantity >= p.DiscountMinQty;
+  return hasDiscount ? p.Price * (1 - p.DiscountPercentage / 100) : p.Price;
+}
+
 router.post('/login', async (req, res) => {
     const {email, password, rememberMe} = req.body;
     const expiresAt = new Date(Date.now() + 5 * 60000).toISOString(); // 5 minutes expiration for 2FA code
@@ -160,199 +165,436 @@ router.get('/client-companies', authenticateToken, async(req, res) => {
 });
 
 //sending the exported info / text
-router.post('/send-export-email', authenticateToken, async(req, res) => {
-    const {clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
-    
+router.post('/send-export-email', authenticateToken, async (req, res) => {
+  const { clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
+
+  // вземи userId от токена (ако middleware-а ти вече сетва req.user, това ще е валидно)
+  const userId = req.user?.id || (() => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
     try {
-        const pool = await sql.connect();
-        const result = await pool.request().input('ClientCompanyID', sql.Int, clientCompanyId)
-            .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
-        
-        const client = result.recordset[0];
-        if(!client){
-            return res.status(404).json({message: 'Client not found'});
-        }
-        let htmlContent = `
-            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
-                <h2 style="color: #2d89ef;">Hello ${client.Name},</h2>
-                <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
-                <p>Here is your exported product list:</p>
-                <ul style="padding-left: 0; list-style: none;">`;
-        
-        productList.forEach(product => {
-            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
-            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
-            const total = (pricePerUnit * product.quantity).toFixed(2);
+      const payload = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      return payload.id || payload.userId || null;
+    } catch { return null; }
+  })();
 
-            htmlContent += `
-                <li style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
-                    <strong>${product.Name}</strong><br/>
-                    Quantity: ${product.quantity}<br/>
-                    Price per unit: $${pricePerUnit.toFixed(2)}<br/>
-                    ${hasDiscount ? `<span style="color: green;">Discount: ${product.DiscountPercentage}%</span><br/>` : ''}
-                    Total: <strong>$${total}</strong>
-                </li>`;
-        });
+  if (!userId) {
+    console.error('No userId found in token');
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
 
-        htmlContent += `
-                </ul>
-                <p><strong>Total (no tax):</strong> $${totalPrice.toFixed(2)}</p>
-                <p><strong>Total (with tax 20%):</strong> $${totalWithTax.toFixed(2)}</p>
-                <p style="margin-top: 30px;">Thank you for your business,<br/><strong>Your Company Team</strong></p>
-            </div>`;
-        const userId = req.user?.id;
+  const pool = await sql.connect();
+  const tx = new sql.Transaction(pool);
 
-        if (!userId) {
-        console.error('No userId found in token');
-        return res.status(401).json({ message: 'User not authenticated' });
-        }
+  try {
+    await tx.begin();
 
+    // 1) Вземи клиент
+    const client = (await new sql.Request(tx)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID')
+    ).recordset[0];
 
-        const exportedResult = await pool.request()
-            .input('UserID', sql.Int, userId)
-            .input('ClientCompanyID', sql.Int, clientCompanyId)
-            .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
-            .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
-            .query(`INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax) 
-                OUTPUT INSERTED.ExportID
-                VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax)`);
-        const exportId = exportedResult.recordset[0].ExportID;
-
-        for(const product of productList) 
-            {
-                const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
-                const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
-
-                await pool.request()
-                    .input('ExportID', sql.Int, exportId)
-                    .input('ProductID', sql.Int, product.ProductID)
-                    .input('Quantity', sql.Int, product.quantity)
-                    .input('PricePerUnit', sql.Decimal(10, 2), pricePerUnit)
-                    .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
-                    .query(`INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) 
-                        VALUES (@ExportID, @ProductID, @Quantity, @PricePerUnit, @DiscountPercentage)`);
-            }
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: client.Email,
-            subject: 'Your order from Lotus',
-            html: htmlContent
-        });
-
-        res.status(200).json({message: 'Export email sent to client'});
-    } catch(err) {
-        console.error('Error sending export email: ', err);
-        res.status(500).json({message: 'Failed to send export email'});
+    if (!client) {
+      await tx.rollback();
+      return res.status(404).json({ message: 'Client not found' });
     }
+
+    // 2) Създай Order (Submitted, защото експорт = подадена заявка)
+    const orderIns = await new sql.Request(tx)
+      .input('UserID', sql.Int, userId)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .input('Status', sql.VarChar, 'Submitted')
+      .input('TotalPrice', sql.Decimal(18, 2), totalPrice)
+      .input('TotalWithTax', sql.Decimal(18, 2), totalWithTax)
+      .query(`
+        INSERT INTO Orders (UserID, ClientCompanyID, Status, TotalPrice, TotalWithTax, SubmittedAt)
+        OUTPUT INSERTED.OrderID
+        VALUES (@UserID, @ClientCompanyID, @Status, @TotalPrice, @TotalWithTax, SYSUTCDATETIME())
+      `);
+    const orderId = orderIns.recordset[0].OrderID;
+
+    // 3) Добави редове (OrderItem) – същата логика за отстъпки като при HTML
+    for (const product of productList) {
+      const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+      const unitPrice = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+
+      await new sql.Request(tx)
+        .input('OrderID', sql.Int, orderId)
+        .input('ProductID', sql.Int, product.ProductID)
+        .input('Quantity', sql.Int, product.quantity)
+        .input('UnitPrice', sql.Decimal(18, 2), unitPrice)
+        .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
+        .query(`
+          INSERT INTO OrderItem (OrderID, ProductID, Quantity, UnitPrice, DiscountPercentage)
+          VALUES (@OrderID, @ProductID, @Quantity, @UnitPrice, @DiscountPercentage)
+        `);
+    }
+
+    // 4) Построй HTML (остави си твоята текуща логика без промени)
+    let htmlContent = `
+      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
+        <h2 style="color: #2d89ef;">Hello ${client.Name},</h2>
+        <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+        <p>Here is your exported product list:</p>
+        <ul style="padding-left: 0; list-style: none;">`;
+
+    for (const product of productList) {
+      const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+      const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+      const total = (pricePerUnit * product.quantity).toFixed(2);
+
+      htmlContent += `
+        <li style="margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #ccc;">
+          <strong>${product.Name}</strong><br/>
+          Quantity: ${product.quantity}<br/>
+          Price per unit: $${pricePerUnit.toFixed(2)}<br/>
+          ${hasDiscount ? `<span style="color: green;">Discount: ${product.DiscountPercentage}%</span><br/>` : ''}
+          Total: <strong>$${total}</strong>
+        </li>`;
+    }
+
+    htmlContent += `
+        </ul>
+        <p><strong>Total (no tax):</strong> $${Number(totalPrice).toFixed(2)}</p>
+        <p><strong>Total (with tax 20%):</strong> $${Number(totalWithTax).toFixed(2)}</p>
+        <p style="margin-top: 30px;">Thank you for your business,<br/><strong>Your Company Team</strong></p>
+      </div>`;
+
+    // 5) Направи TXT съдържание (еднократно, без помощни функции)
+    const line = '-'.repeat(78);
+    let txtContent = '';
+    txtContent += `ORDER ID: ${orderId}\n`;
+    txtContent += `ORDER FOR: ${client.Name}  <${client.Email || 'n/a'}>\n`;
+    txtContent += `DATE: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    txtContent += `${line}\n`;
+    txtContent += `Product                                 Qty       Unit      Disc%        Total\n`;
+    txtContent += `${line}\n`;
+
+    for (const p of productList) {
+      const hasDiscount = p.DiscountPercentage > 0 && p.quantity >= p.DiscountMinQty;
+      const unit = hasDiscount ? p.Price * (1 - p.DiscountPercentage / 100) : p.Price;
+      const total = unit * p.quantity;
+
+      const nameCol = (p.Name || '').toString().padEnd(38).slice(0, 38);
+      const qtyCol = String(p.quantity).padStart(5);
+      const unitCol = (`$${Number(unit).toFixed(2)}`).padStart(12);
+      const discCol = (hasDiscount ? `${p.DiscountPercentage}%` : '-').padStart(8);
+      const totalCol = (`$${total.toFixed(2)}`).padStart(12);
+
+      txtContent += `${nameCol} ${qtyCol} ${unitCol} ${discCol} ${totalCol}\n`;
+    }
+
+    txtContent += `${line}\n`;
+    txtContent += `${'Total (no tax):'.padEnd(66)} ${`$${Number(totalPrice).toFixed(2)}`.padStart(12)}\n`;
+    txtContent += `${'Total (with tax 20%):'.padEnd(66)} ${`$${Number(totalWithTax).toFixed(2)}`.padStart(12)}\n`;
+
+    // 6) ExportHistory (с OrderID)
+    const exportedResult = await new sql.Request(tx)
+      .input('UserID', sql.Int, userId)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
+      .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
+      .input('OrderID', sql.Int, orderId)
+      .query(`
+        INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax, OrderID)
+        OUTPUT INSERTED.ExportID
+        VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax, @OrderID)
+      `);
+    const exportId = exportedResult.recordset[0].ExportID;
+
+    // 7) (по избор) ако държиш и в ExportedProduct копие – остави твоя код тук
+    //    ... INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) ...
+
+    await tx.commit();
+
+    // 8) Изпрати имейла (HTML + TXT като text + прикачен .txt)
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: client.Email,
+      subject: `Your order from Lotus (Export #${exportId}, Order #${orderId})`,
+      html: htmlContent,
+      text: txtContent,
+      attachments: [
+        {
+          filename: `Order_${orderId}.txt`,
+          content: txtContent,
+          contentType: 'text/plain; charset=utf-8'
+        }
+      ]
+    });
+
+    res.status(200).json({ message: 'Export email sent to client', orderId, exportId });
+  } catch (err) {
+    try { await tx.rollback(); } catch {}
+    console.error('Error sending export email: ', err);
+    res.status(500).json({ message: 'Failed to send export email' });
+  }
 });
+
 
 router.post('/send-export-excel', authenticateToken, async (req, res) => {
-    const {clientCompanyId, productList, totalPrice, totalWithTax} = req.body;
+  const { clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
 
+  // userId от токена (fallback, ако middleware не сетва req.user)
+  const userId = req.user?.id || (() => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
     try {
-        const pool = await sql.connect();
-        const result = await pool.request().input('ClientCompanyID', sql.Int, clientCompanyId)
-            .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
-        
-        const client = result.recordset[0];
-        if(!client) {
-            return res.status(404).json({message: 'Client not found'});
-        }
+      const payload = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      return payload.id || payload.userId || null;
+    } catch { return null; }
+  })();
 
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Products order from Lotus');
+  if (!userId) {
+    console.error('No userId found in token');
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
 
-        worksheet.columns = [
-            {header: 'Product Name', key: 'name', width: 30},
-            { header: 'Quantity', key: 'quantity', width: 10 },
-            { header: 'Price per Unit', key: 'pricePerUnit', width: 15 },
-            { header: 'Total Price', key: 'totalPrice', width: 15 },
-            { header: 'Discount', key: 'discount', width: 15 }
-        ];
+  try {
+    const pool = await sql.connect();
+    const tx = new sql.Transaction(pool);
+    await tx.begin();
 
-        productList.forEach(product => {
-            const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
-            const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
-            const totalPrice = pricePerUnit * product.quantity;
+    // 1) Клиент
+    const clientRes = await new sql.Request(tx)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
 
-            worksheet.addRow({
-                name: product.Name,
-                quantity: product.quantity,
-                pricePerUnit: pricePerUnit.toFixed(2),
-                totalPrice: totalPrice.toFixed(2),
-                discount: hasDiscount ? `${product.DiscountPercentage}% Off` : `No Discount`
-            });
-        });
-
-        worksheet.addRow({});
-        worksheet.addRow({name: 'Total (no tax)', totalPrice: totalPrice.toFixed(2)});
-        worksheet.addRow({name: 'Total (with tax 20%)', totalPrice: totalWithTax.toFixed(2)});
-
-        const buffer = await workbook.xlsx.writeBuffer();
-
-        const userId = req.user?.id;
-
-        if (!userId) {
-        console.error('No userId found in token');
-        return res.status(401).json({ message: 'User not authenticated' });
-        }
-
-
-        const exportedResult = await pool.request()
-            .input('UserID', sql.Int, userId)
-            .input('ClientCompanyID', sql.Int, clientCompanyId)
-            .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
-            .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
-            .query(`INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax) 
-                OUTPUT INSERTED.ExportID
-                VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax)`);
-        const exportId = exportedResult.recordset[0].ExportID;
-
-        for(const product of productList) 
-            {
-                const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
-                const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
-
-                await pool.request()
-                    .input('ExportID', sql.Int, exportId)
-                    .input('ProductID', sql.Int, product.ProductID)
-                    .input('Quantity', sql.Int, product.quantity)
-                    .input('PricePerUnit', sql.Decimal(10, 2), pricePerUnit)
-                    .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
-                    .query(`INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) 
-                        VALUES (@ExportID, @ProductID, @Quantity, @PricePerUnit, @DiscountPercentage)`);
-            }
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: client.Email, 
-            subject: 'Your order from Lotus (Excel)',
-            html: `
-            <div style="font-family: Arial, sans-serif; color: #333;">
-                    <h2>Hello ${client.Name},</h2>
-                    <p>Your exported product list is attached as an Excel file.</p>
-                    <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
-                    <p>Summary:</p>
-                    <ul>
-                        <li><strong>Total Products:</strong> ${productList.length}</li>
-                        <li><strong>Total (no tax):</strong> $${totalPrice.toFixed(2)}</li>
-                        <li><strong>Total (with tax 20%):</strong> $${totalWithTax.toFixed(2)}</li>
-                    </ul>
-                </div>
-            `,
-            attachments: [
-                {
-                    filename: 'ProductExport.xlsx',
-                    content: buffer,
-                    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                }
-            ]
-        });
-        res.status(200).json({message: 'Excel export and send was successful'});
-    } catch(err) {
-        console.error('Error sending Excel export: ', err);
-        res.status(500).json({message: 'Failed to send Excel export'});
+    const client = clientRes.recordset[0];
+    if (!client) {
+      await tx.rollback();
+      return res.status(404).json({ message: 'Client not found' });
     }
+
+    // 2) Създай Order (Submitted веднага, защото експорт = подадена заявка)
+    const orderIns = await new sql.Request(tx)
+      .input('UserID', sql.Int, userId)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .input('Status', sql.VarChar, 'Submitted')
+      .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
+      .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
+      .query(`
+        INSERT INTO Orders (UserID, ClientCompanyID, Status, TotalPrice, TotalWithTax, SubmittedAt)
+        OUTPUT INSERTED.OrderID
+        VALUES (@UserID, @ClientCompanyID, @Status, @TotalPrice, @TotalWithTax, SYSUTCDATETIME())
+      `);
+    const orderId = orderIns.recordset[0].OrderID;
+
+    // 3) Редове към OrderItem (със същата логика за отстъпка)
+    for (const product of productList) {
+      const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+      const unitPrice = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+
+      await new sql.Request(tx)
+        .input('OrderID', sql.Int, orderId)
+        .input('ProductID', sql.Int, product.ProductID)
+        .input('Quantity', sql.Int, product.quantity)
+        .input('UnitPrice', sql.Decimal(10, 2), unitPrice)
+        .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
+        .query(`
+          INSERT INTO OrderItem (OrderID, ProductID, Quantity, UnitPrice, DiscountPercentage)
+          VALUES (@OrderID, @ProductID, @Quantity, @UnitPrice, @DiscountPercentage)
+        `);
+    }
+
+    // 4) Excel — форматиран
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('Products order from Lotus');
+
+    // Заглавие
+    const title = `Order #${orderId} for ${client.Name} — ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+    ws.mergeCells('A1:E1');
+    ws.getCell('A1').value = title;
+    ws.getCell('A1').font = { bold: true, size: 14 };
+    ws.getCell('A1').alignment = { horizontal: 'center' };
+
+    // Празен ред
+    ws.addRow([]);
+
+    // Колони
+    ws.columns = [
+      { header: 'Product Name', key: 'name', width: 36 },
+      { header: 'Quantity', key: 'quantity', width: 10 },
+      { header: 'Price per Unit', key: 'pricePerUnit', width: 15 },
+      { header: 'Total Price', key: 'totalPriceRow', width: 15 },
+      { header: 'Discount', key: 'discount', width: 14 }
+    ];
+
+    // Header стил
+    const headerRow = ws.getRow(3);
+    headerRow.font = { bold: true };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.eachCell(c => {
+      c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
+    });
+
+    // Данни
+    for (const product of productList) {
+      const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+      const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+      const rowTotal = pricePerUnit * product.quantity; // !! различно име от totalPrice, за да не засенчва параметъра
+
+      ws.addRow({
+        name: product.Name,
+        quantity: product.quantity,
+        pricePerUnit: Number(pricePerUnit),
+        totalPriceRow: Number(rowTotal),
+        discount: hasDiscount ? `${product.DiscountPercentage}% Off` : `No Discount`
+      });
+    }
+
+    // Формати на клетки
+    const firstDataRow = 4;
+    const lastDataRow = ws.lastRow.number;
+    ws.getColumn('quantity').alignment = { horizontal: 'right' };
+    ws.getColumn('pricePerUnit').numFmt = '$#,##0.00';
+    ws.getColumn('totalPriceRow').numFmt = '$#,##0.00';
+
+    // Тънки бордюри за данните (по избор)
+    for (let r = firstDataRow; r <= lastDataRow; r++) {
+      ws.getRow(r).eachCell(c => {
+        c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+      });
+    }
+
+    // Празен ред + обобщение
+    ws.addRow({});
+    const summary1 = ws.addRow({ name: 'Total (no tax)', totalPriceRow: Number(totalPrice) });
+    const summary2 = ws.addRow({ name: 'Total (with tax 20%)', totalPriceRow: Number(totalWithTax) });
+
+    summary1.font = { bold: true };
+    summary2.font = { bold: true };
+    ws.getCell(`D${summary1.number}`).numFmt = '$#,##0.00';
+    ws.getCell(`D${summary2.number}`).numFmt = '$#,##0.00';
+
+    // Freeze header + autofilter
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 3 }];
+    ws.autoFilter = { from: 'A3', to: `E${lastDataRow}` };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    // 5) ExportHistory (с OrderID)
+    const exportedResult = await new sql.Request(tx)
+      .input('UserID', sql.Int, userId)
+      .input('ClientCompanyID', sql.Int, clientCompanyId)
+      .input('TotalPrice', sql.Decimal(10, 2), totalPrice)
+      .input('TotalWithTax', sql.Decimal(10, 2), totalWithTax)
+      .input('OrderID', sql.Int, orderId)
+      .query(`
+        INSERT INTO ExportHistory (UserID, ClientCompanyID, TotalPrice, TotalWithTax, OrderID)
+        OUTPUT INSERTED.ExportID
+        VALUES (@UserID, @ClientCompanyID, @TotalPrice, @TotalWithTax, @OrderID)
+      `);
+    const exportId = exportedResult.recordset[0].ExportID;
+
+    // 6) (по избор) Копие на редовете в ExportedProduct — запазвам твоята логика
+    for (const product of productList) {
+      const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
+      const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
+
+      await new sql.Request(tx)
+        .input('ExportID', sql.Int, exportId)
+        .input('ProductID', sql.Int, product.ProductID)
+        .input('Quantity', sql.Int, product.quantity)
+        .input('PricePerUnit', sql.Decimal(10, 2), pricePerUnit)
+        .input('DiscountPercentage', sql.Int, product.DiscountPercentage || 0)
+        .query(`
+          INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage)
+          VALUES (@ExportID, @ProductID, @Quantity, @PricePerUnit, @DiscountPercentage)
+        `);
+    }
+
+    await tx.commit();
+
+    // 7) Имейл с прикачения Excel
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: client.Email,
+      subject: `Your order from Lotus (Excel) — Export #${exportId}, Order #${orderId}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2>Hello ${client.Name},</h2>
+          <p>Your exported product list is attached as an Excel file.</p>
+          <p>The order was made at: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+          <p>Summary:</p>
+          <ul>
+            <li><strong>Total Products:</strong> ${productList.length}</li>
+            <li><strong>Total (no tax):</strong> $${Number(totalPrice).toFixed(2)}</li>
+            <li><strong>Total (with tax 20%):</strong> $${Number(totalWithTax).toFixed(2)}</li>
+            <li><strong>Order ID:</strong> ${orderId}</li>
+            <li><strong>Export ID:</strong> ${exportId}</li>
+          </ul>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: `ProductExport_Order_${orderId}.xlsx`,
+          content: buffer,
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      ]
+    });
+
+    res.status(200).json({ message: 'Excel export and send was successful', orderId, exportId });
+  } catch (err) {
+    console.error('Error sending Excel export: ', err);
+    try { const pool2 = await sql.connect(); const tx2 = new sql.Transaction(pool2); await tx2.rollback(); } catch {}
+    res.status(500).json({ message: 'Failed to send Excel export' });
+  }
 });
+
+
+// Админ: списък поръчки
+router.get('/orders', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    const pool = await sql.connect();
+    const rows = (await pool.request().query(`
+      SELECT o.OrderID, o.Status, o.TotalPrice, o.TotalWithTax, o.CreatedAt, o.SubmittedAt, o.CancelledAt,
+             c.Name AS ClientName, u.Username
+      FROM Orders o
+      JOIN ClientCompany c ON o.ClientCompanyID = c.ClientCompanyID
+      JOIN Users u ON u.UserID = o.UserID
+      ORDER BY o.CreatedAt DESC
+    `)).recordset;
+    res.json(rows);
+  } catch (err) {
+    console.error('List orders error:', err);
+    res.status(500).json({ message: 'Failed to list orders' });
+  }
+});
+
+// Админ: смяна на статус на Cancelled
+router.put('/orders/:id/cancel', authenticateToken, authorizeAdmin, async (req, res) => {
+  const orderId = parseInt(req.params.id, 10);
+  try {
+    const pool = await sql.connect();
+    await pool.request()
+      .input('OrderID', sql.Int, orderId)
+      .query(`UPDATE Orders SET Status='Cancelled', CancelledAt = SYSUTCDATETIME() WHERE OrderID = @OrderID`);
+    res.json({ message: 'Order cancelled' });
+  } catch (err) {
+    console.error('Cancel order error:', err);
+    res.status(500).json({ message: 'Failed to cancel order' });
+  }
+});
+
+// Админ: изтриване на поръчка
+router.delete('/orders/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+  const orderId = parseInt(req.params.id, 10);
+  try {
+    const pool = await sql.connect();
+    await pool.request()
+      .input('OrderID', sql.Int, orderId)
+      .query(`DELETE FROM Orders WHERE OrderID = @OrderID`);
+    res.json({ message: 'Order deleted' });
+  } catch (err) {
+    console.error('Delete order error:', err);
+    res.status(500).json({ message: 'Failed to delete order' });
+  }
+});
+
 
 //exporting an User sales in Excel
 router.get('/export/user/:userId', authenticateToken, authorizeAdmin, async (req, res) => {
