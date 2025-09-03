@@ -168,7 +168,7 @@ router.get('/client-companies', authenticateToken, async(req, res) => {
 router.post('/send-export-email', authenticateToken, async (req, res) => {
   const { clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
 
-  // вземи userId от токена (ако middleware-а ти вече сетва req.user, това ще е валидно)
+ 
   const userId = req.user?.id || (() => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -189,7 +189,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
   try {
     await tx.begin();
 
-    // 1) Вземи клиент
+    
     const client = (await new sql.Request(tx)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
       .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID')
@@ -200,7 +200,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
 
-    // 2) Създай Order (Submitted, защото експорт = подадена заявка)
+   
     const orderIns = await new sql.Request(tx)
       .input('UserID', sql.Int, userId)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
@@ -214,7 +214,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
       `);
     const orderId = orderIns.recordset[0].OrderID;
 
-    // 3) Добави редове (OrderItem) – същата логика за отстъпки като при HTML
+   
     for (const product of productList) {
       const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
       const unitPrice = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
@@ -231,7 +231,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
         `);
     }
 
-    // 4) Построй HTML (остави си твоята текуща логика без промени)
+   
     let htmlContent = `
       <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
         <h2 style="color: #2d89ef;">Hello ${client.Name},</h2>
@@ -261,7 +261,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
         <p style="margin-top: 30px;">Thank you for your business,<br/><strong>Your Company Team</strong></p>
       </div>`;
 
-    // 5) Направи TXT съдържание (еднократно, без помощни функции)
+   
     const line = '-'.repeat(78);
     let txtContent = '';
     txtContent += `ORDER ID: ${orderId}\n`;
@@ -289,7 +289,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
     txtContent += `${'Total (no tax):'.padEnd(66)} ${`$${Number(totalPrice).toFixed(2)}`.padStart(12)}\n`;
     txtContent += `${'Total (with tax 20%):'.padEnd(66)} ${`$${Number(totalWithTax).toFixed(2)}`.padStart(12)}\n`;
 
-    // 6) ExportHistory (с OrderID)
+    
     const exportedResult = await new sql.Request(tx)
       .input('UserID', sql.Int, userId)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
@@ -303,12 +303,10 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
       `);
     const exportId = exportedResult.recordset[0].ExportID;
 
-    // 7) (по избор) ако държиш и в ExportedProduct копие – остави твоя код тук
-    //    ... INSERT INTO ExportedProduct (ExportID, ProductID, Quantity, PricePerUnit, DiscountPercentage) ...
-
+  
     await tx.commit();
 
-    // 8) Изпрати имейла (HTML + TXT като text + прикачен .txt)
+   
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: client.Email,
@@ -336,7 +334,7 @@ router.post('/send-export-email', authenticateToken, async (req, res) => {
 router.post('/send-export-excel', authenticateToken, async (req, res) => {
   const { clientCompanyId, productList, totalPrice, totalWithTax } = req.body;
 
-  // userId от токена (fallback, ако middleware не сетва req.user)
+
   const userId = req.user?.id || (() => {
     const authHeader = req.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -356,7 +354,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
     const tx = new sql.Transaction(pool);
     await tx.begin();
 
-    // 1) Клиент
+
     const clientRes = await new sql.Request(tx)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
       .query('SELECT Name, Email FROM ClientCompany WHERE ClientCompanyID = @ClientCompanyID');
@@ -367,7 +365,6 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
 
-    // 2) Създай Order (Submitted веднага, защото експорт = подадена заявка)
     const orderIns = await new sql.Request(tx)
       .input('UserID', sql.Int, userId)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
@@ -381,7 +378,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       `);
     const orderId = orderIns.recordset[0].OrderID;
 
-    // 3) Редове към OrderItem (със същата логика за отстъпка)
+
     for (const product of productList) {
       const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
       const unitPrice = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
@@ -398,21 +395,21 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
         `);
     }
 
-    // 4) Excel — форматиран
+    
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet('Products order from Lotus');
 
-    // Заглавие
+
     const title = `Order #${orderId} for ${client.Name} — ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
     ws.mergeCells('A1:E1');
     ws.getCell('A1').value = title;
     ws.getCell('A1').font = { bold: true, size: 14 };
     ws.getCell('A1').alignment = { horizontal: 'center' };
 
-    // Празен ред
+  
     ws.addRow([]);
 
-    // Колони
+ 
     ws.columns = [
       { header: 'Product Name', key: 'name', width: 36 },
       { header: 'Quantity', key: 'quantity', width: 10 },
@@ -421,7 +418,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       { header: 'Discount', key: 'discount', width: 14 }
     ];
 
-    // Header стил
+ 
     const headerRow = ws.getRow(3);
     headerRow.font = { bold: true };
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -430,7 +427,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
     });
 
-    // Данни
+  
     for (const product of productList) {
       const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
       const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
@@ -445,21 +442,21 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       });
     }
 
-    // Формати на клетки
+   
     const firstDataRow = 4;
     const lastDataRow = ws.lastRow.number;
     ws.getColumn('quantity').alignment = { horizontal: 'right' };
     ws.getColumn('pricePerUnit').numFmt = '$#,##0.00';
     ws.getColumn('totalPriceRow').numFmt = '$#,##0.00';
 
-    // Тънки бордюри за данните (по избор)
+  
     for (let r = firstDataRow; r <= lastDataRow; r++) {
       ws.getRow(r).eachCell(c => {
         c.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       });
     }
 
-    // Празен ред + обобщение
+   
     ws.addRow({});
     const summary1 = ws.addRow({ name: 'Total (no tax)', totalPriceRow: Number(totalPrice) });
     const summary2 = ws.addRow({ name: 'Total (with tax 20%)', totalPriceRow: Number(totalWithTax) });
@@ -469,13 +466,13 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
     ws.getCell(`D${summary1.number}`).numFmt = '$#,##0.00';
     ws.getCell(`D${summary2.number}`).numFmt = '$#,##0.00';
 
-    // Freeze header + autofilter
+  
     ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 3 }];
     ws.autoFilter = { from: 'A3', to: `E${lastDataRow}` };
 
     const buffer = await workbook.xlsx.writeBuffer();
 
-    // 5) ExportHistory (с OrderID)
+   
     const exportedResult = await new sql.Request(tx)
       .input('UserID', sql.Int, userId)
       .input('ClientCompanyID', sql.Int, clientCompanyId)
@@ -489,7 +486,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
       `);
     const exportId = exportedResult.recordset[0].ExportID;
 
-    // 6) (по избор) Копие на редовете в ExportedProduct — запазвам твоята логика
+   
     for (const product of productList) {
       const hasDiscount = product.DiscountPercentage > 0 && product.quantity >= product.DiscountMinQty;
       const pricePerUnit = hasDiscount ? product.Price * (1 - product.DiscountPercentage / 100) : product.Price;
@@ -508,7 +505,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
 
     await tx.commit();
 
-    // 7) Имейл с прикачения Excel
+   
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: client.Email,
@@ -546,7 +543,7 @@ router.post('/send-export-excel', authenticateToken, async (req, res) => {
 });
 
 
-// Админ: списък поръчки
+
 router.get('/orders', authenticateToken, authorizeAdmin, async (req, res) => {
   try {
     const pool = await sql.connect();
@@ -565,7 +562,7 @@ router.get('/orders', authenticateToken, authorizeAdmin, async (req, res) => {
   }
 });
 
-// Админ: смяна на статус на Cancelled
+
 router.put('/orders/:id/cancel', authenticateToken, authorizeAdmin, async (req, res) => {
   const orderId = parseInt(req.params.id, 10);
   try {
@@ -580,7 +577,7 @@ router.put('/orders/:id/cancel', authenticateToken, authorizeAdmin, async (req, 
   }
 });
 
-// Админ: изтриване на поръчка
+
 router.delete('/orders/:id', authenticateToken, authorizeAdmin, async (req, res) => {
   const orderId = parseInt(req.params.id, 10);
   try {
@@ -596,7 +593,7 @@ router.delete('/orders/:id', authenticateToken, authorizeAdmin, async (req, res)
 });
 
 
-//exporting an User sales in Excel
+
 router.get('/export/user/:userId', authenticateToken, authorizeAdmin, async (req, res) => {
     const userId = parseInt(req.params.userId);
     try {
@@ -753,7 +750,7 @@ router.get('/products', async (req, res) =>{
 
 //inserting a new product
 router.post('/products', authenticateToken, authorizeAdmin, async(req, res) =>{
-    const {name, description, price, imagePath, brand, stockqty, isFeatured, isArchived, discountPercentage, discountMinQty } = req.body;
+    const {name, description, price, imagePath, brand, stockqty, isFeatured, discountPercentage, discountMinQty } = req.body;
 
     try{
         const pool = await sql.connect();
@@ -764,13 +761,12 @@ router.post('/products', authenticateToken, authorizeAdmin, async(req, res) =>{
                             .input('Brand', sql.NVarChar, brand)
                             .input('StockQty', sql.Int, stockqty)
                             .input('IsFeatured', sql.Bit, isFeatured)
-                            .input('IsArchived', sql.Bit, isArchived)
                             .input('DiscountPercentage', sql.Int, discountPercentage)
                             .input('DiscountMinQty', sql.Int, discountMinQty)
                             .query(`
-                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, IsFeatured, IsArchived, DiscountPercentage, DiscountMinQty)
+                INSERT INTO Product (Name, Description, Price, ImagePath, Brand, StockQty, IsFeatured, DiscountPercentage, DiscountMinQty)
                 OUTPUT INSERTED.ProductID
-                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @IsFeatured, @IsArchived, @DiscountPercentage, @DiscountMinQty)`);
+                VALUES (@Name, @Description, @Price, @ImagePath, @Brand, @StockQty, @IsFeatured, @DiscountPercentage, @DiscountMinQty)`);
         const newProductID = result.recordset[0].ProductID;
         res.status(201).json({message: 'Product added successfully', productId: newProductID});
     } catch(err) {
@@ -814,7 +810,7 @@ router.delete('/products/:id', authenticateToken, authorizeAdmin, async(req, res
 //updating a product by ID
 router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) => {
     const productId = req.params.id;
-    const {name, description, price, imagePath, brand, stockqty, isFeatured, isArchived, discountPercentage, discountMinQty, discountStart, discountEnd} = req.body;
+    const {name, description, price, imagePath, brand, stockqty, isFeatured, discountPercentage, discountMinQty, discountStart, discountEnd} = req.body;
 
     try{
         const pool = await sql.connect();
@@ -827,7 +823,6 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                 .input('Brand', sql.NVarChar, brand)
                 .input('StockQty', sql.Int, stockqty)
                 .input('IsFeatured', sql.Bit, isFeatured)
-                .input('IsArchived', sql.Bit, isArchived)
                 .input('DiscountPercentage', sql.Int, discountPercentage)
                 .input('DiscountMinQty', sql.Int, discountMinQty)
                 .input('DiscountStart', sql.DateTime, discountStart || null) 
@@ -840,7 +835,6 @@ router.put('/products/:id', authenticateToken, authorizeAdmin, async(req, res) =
                             Brand = @Brand,
                             StockQty = @StockQty,
                             IsFeatured = @IsFeatured,
-                            IsArchived = @IsArchived,
                             DiscountPercentage = @DiscountPercentage,
                             DiscountMinQty = @DiscountMinQty,
                             DiscountStart = @DiscountStart,

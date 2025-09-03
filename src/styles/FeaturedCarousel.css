@@ -1,6 +1,20 @@
+
+:root{
+  --carousel-bg: rgb(219, 255, 231);
+  --card-bg: #fff;
+  --fade-size: 48px;
+  --fade-size-sm: 24px;
+  --fade-size-xs: 18px;
+  --card-radius: 12px;
+  --img-radius: 8px;
+  --shadow: 0 4px 10px rgba(0,0,0,0.1);
+  --arrow-bg: #333;
+  --arrow-fg: #fff;
+}
+
 .carousel-wrapper{
   padding: 2rem;
-  background-color: rgb(219, 255, 231);
+  background-color: var(--carousel-bg);
   margin-top: 1rem;
 }
 
@@ -11,25 +25,26 @@
   overflow: hidden;
 }
 
-/* optional nice fade on edges */
 .carousel-container::before,
 .carousel-container::after{
   content:"";
-  position:absolute; top:0; bottom:0; width:48px; pointer-events:none;
+  position:absolute; inset:0 auto 0 0;
+  width: var(--fade-size);
+  pointer-events:none;
   z-index:2;
-  background: linear-gradient(to right, rgb(219,255,231), rgba(219,255,231,0));
+  background: linear-gradient(to right, var(--carousel-bg), rgba(219,255,231,0));
 }
 .carousel-container::after{
-  right:0; transform: scaleX(-1);
+  left:auto; right:0; transform: scaleX(-1);
 }
 
 .carousel-row{
   display: flex;
-  gap: 1rem;                 /* used by JS to compute step */
+  gap: 1rem;          
   overflow-x: auto;
   padding: 1rem 0;
   scroll-behavior: smooth;
-  scrollbar-width: none;     /* firefox */
+  scrollbar-width: none;  
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
 }
@@ -37,11 +52,10 @@
 
 .carousel-item{
   flex: 0 0 auto;
-  /* responsive card width: grows on desktop, shrinks on phones */
   width: clamp(220px, 32vw, 280px);
-  background:#fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
   padding: 1rem;
   text-align: center;
   scroll-snap-align: start;
@@ -49,58 +63,53 @@
 .carousel-item img{
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  border-radius: var(--img-radius);
 }
 
-/* arrows sit on top so they don't push layout */
 .arrow-button{
-  position: relative;
+  position: relative; 
   z-index: 3;
-  background:#333;
-  color:#fff;
-  border:none;
-  border-radius:50%;
-  font-size:1.4rem;
-  width:40px; height:40px;
-  cursor:pointer;
+  background: var(--arrow-bg);
+  color: var(--arrow-fg);
+  border: none;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  width: 40px; height: 40px;
+  cursor: pointer;
 }
-.arrow-button.left{ margin-right:.5rem; }
-.arrow-button.right{ margin-left:.5rem; }
+.arrow-button.left{ margin-right: .5rem; }
+.arrow-button.right{ margin-left: .5rem; }
 
-/* phones: cards a bit wider in viewport for easier tap */
 @media (max-width: 640px){
   .carousel-wrapper{ padding: 1rem; }
   .carousel-item{ width: clamp(220px, 75vw, 320px); }
   .carousel-container::before,
-  .carousel-container::after{ width: 24px; } /* subtler fade on small screens */
+  .carousel-container::after{ width: var(--fade-size-sm); }
 }
-/* Phones ≤ 480px */
+
 @media (max-width: 480px){
   .carousel-wrapper{ padding: 12px; }
-
-  /* a touch narrower than before */
   .carousel-item{
     width: clamp(220px, 84vw, 300px);
     padding: 12px;
   }
-
-  /* keep image from getting too tall */
   .carousel-item img{
     aspect-ratio: 4 / 3;
     object-fit: cover;
   }
-
-  /* arrows a little smaller + tighter fade */
   .arrow-button{ width: 36px; height: 36px; font-size: 1.2rem; }
   .carousel-container::before,
-  .carousel-container::after{ width: 18px; }
+  .carousel-container::after{ width: var(--fade-size-xs); }
 }
 
-/* Very small phones ≤ 360px */
 @media (max-width: 360px){
   .carousel-item{
     width: clamp(220px, 90vw, 280px);
     padding: 10px;
   }
   .arrow-button{ width: 32px; height: 32px; font-size: 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .carousel-row{ scroll-behavior: auto; }
 }

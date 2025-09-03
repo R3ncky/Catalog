@@ -138,7 +138,7 @@ export default function AboutUs(){
         <main className="main-content">
         <h2>About us</h2>
         <div className="about-us-container">
-           <img src="../assets/doge.jpg" alt="" className="about-us-image"/>
+           <img src="../assets/water-lily.jpg" alt="" className="about-us-image"/>
             <div className="about-us-text">
             <p>Welcome to Catalog App, your trusted source for honest and detailed information about cosmetic products. 
                Whether you're searching for the perfect makeup sponge, a gentle shampoo, nourishing soaps, or other beauty essentials, 

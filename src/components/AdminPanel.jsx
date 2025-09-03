@@ -35,7 +35,6 @@ export default function AdminPanel() {
     brand: '',
     stockqty: '',
     isFeatured: false,
-    isArchived: false
   });
 
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -285,7 +284,6 @@ export default function AdminPanel() {
           brand: '',
           stockqty: '',
           isFeatured: false,
-          isArchived: false
         });
         setSelectedCategories([]);
         //refresh products
@@ -307,7 +305,6 @@ export default function AdminPanel() {
       brand: product.Brand ?? '',
       stockqty: product.StockQty ?? '',
       isFeatured: product.IsFeatured ?? false,
-      isArchived: product.IsArchived ?? false,
       discountPercentage: product.DiscountPercentage ?? '',
       discountMinQty: product.DiscountMinQty ?? '',
       discountStart: product.DiscountStart ?? '',
@@ -551,7 +548,7 @@ export default function AdminPanel() {
         {isEditing && editForm && (
           <div className="modal-overlay">
             <div className="modal-card">
-              {/* Header */}
+             
               <div className="modal-header">
                 <h3>Edit Product</h3>
                 <button
@@ -563,9 +560,9 @@ export default function AdminPanel() {
                 </button>
               </div>
 
-              {/* Body */}
+          
               <div className="modal-body">
-                {/* Name / Brand */}
+             
                 <div className="grid-2">
                   <div className="form-field">
                     <span>Name</span>
@@ -594,7 +591,7 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* Description */}
+                
                 <div className="form-field">
                   <span>Description</span>
                   <textarea
@@ -605,7 +602,7 @@ export default function AdminPanel() {
                   />
                 </div>
 
-                {/* Price / Stock */}
+              
                 <div className="grid-2">
                   <div className="form-field">
                     <span>Price</span>
@@ -631,7 +628,7 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* Image */}
+               
                 <div className="form-field">
                   <span>Image Path</span>
                   <input
@@ -642,7 +639,7 @@ export default function AdminPanel() {
                   />
                 </div>
 
-                {/* Toggles */}
+              
                 <div className="toggle-row">
                   <label className="check">
                     <input
@@ -653,18 +650,9 @@ export default function AdminPanel() {
                     />
                     Featured
                   </label>
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      name="isArchived"
-                      checked={editForm.isArchived}
-                      onChange={handleEditChange}
-                    />
-                    Archived
-                  </label>
                 </div>
 
-                {/* Discount */}
+             
                 <div className="grid-2">
                   <div className="form-field">
                     <span>Discount %</span>
@@ -690,7 +678,7 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                {/* Dates */}
+                
                 <div className="grid-2">
                   <div className="form-field">
                     <span>Discount Start</span>
@@ -713,7 +701,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              {/* Footer */}
+            
               <div className="modal-footer">
                 <button
                   type="button"
@@ -801,11 +789,7 @@ export default function AdminPanel() {
                   <label className="check">
                     <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />
                     <span>Featured</span>
-                  </label>
-                  <label className="check">
-                    <input type="checkbox" name="isArchived" checked={form.isArchived} onChange={handleChange} />
-                    <span>Archived</span>
-                  </label>
+                  </label> 
                 </div>
               </form>
               <div className="modal-footer">
@@ -817,8 +801,8 @@ export default function AdminPanel() {
         )}
 
         {isRegistering && (
-          <div className="modal-overlay">{/* was edit-modal */}
-            <div className="modal-card">{/* was edit-grid */}
+          <div className="modal-overlay">
+            <div className="modal-card">
               <div className="modal-header">
                 <h3>Add New User</h3>
                 <button className="icon-btn" onClick={() => setIsRegistering(false)}>×</button>
@@ -855,7 +839,7 @@ export default function AdminPanel() {
         {isEditingUser && editingUser && (
           <div className="modal-overlay">
             <div className="modal-card">
-              {/* Header */}
+
               <div className="modal-header">
                 <h3>Edit User</h3>
                 <button
@@ -867,7 +851,7 @@ export default function AdminPanel() {
                 </button>
               </div>
 
-              {/* Body */}
+     
               <div className="modal-body">
                 <div className="form-field">
                   <span>Username</span>
@@ -915,7 +899,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              {/* Footer */}
+            
               <div className="modal-footer">
                 <button
                   type="button"

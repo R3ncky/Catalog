@@ -532,6 +532,7 @@ export default function ProductCatalog() {
                             </fieldset>
                             
                         )}
+                        {token &&(
                         <fieldset className="filters-section">
                             <legend>Other</legend>
                             <label className={`pill ${discountOnly ? 'pill--checked' : ''}`}>
@@ -543,6 +544,7 @@ export default function ProductCatalog() {
                                 <span className="pill__text">Only discounted</span>
                             </label>
                             </fieldset>
+                            )}
                     </div>
 
                     <div className="display-flex2">
@@ -631,10 +633,11 @@ export default function ProductCatalog() {
                                         <img src={`/assets/${product.ImagePath}`} alt={product.Name} className="product-image" />
                                         <h3>{product.Name}</h3>
                                         <p>{product.Description}</p>
-                                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'In Stock'}</p>
-                                        <p>In Stock: {product.StockQty}</p>
                                         {product.Price !== undefined && (
                                             <>
+                                        <p>Status: {product.StockQty < 1 ? 'Out of Stock' : 'In Stock'}</p>
+                                        <p>In Stock: {product.StockQty}</p>
+                                        
                                                 <p><strong>Price: ${product.Price}</strong></p>
                                                 <p><strong>With Tax (20%): ${(product.Price * 1.2).toFixed(2)}</strong></p>
                                                 {product.DiscountPercentage > 0 && product.DiscountMinQty > 0 && product.DiscountEnd && new Date(product.DiscountStart) <= new Date() && (
